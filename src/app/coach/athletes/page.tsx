@@ -21,7 +21,7 @@ export default async function CoachAthletesPage() {
         </span>
       </div>
 
-      <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
+      <ul className="divide-y divide-zinc-200">
         {athletes.map((a) => (
           <li key={a.id} className="flex items-center justify-between py-3">
             <div>
@@ -29,7 +29,7 @@ export default async function CoachAthletesPage() {
               <p className="text-sm text-zinc-500">{a.user.email}</p>
             </div>
             <div className="flex items-center gap-3">
-              <span className="rounded-full bg-zinc-100 px-2 py-1 text-xs dark:bg-zinc-900">
+              <span className="rounded-full bg-zinc-100 px-2 py-1 text-xs">
                 {a.status === "ACTIVE" ? "Activo" : a.status === "INVITED" ? "Invitado" : "Removido"}
               </span>
               <Link href={`/coach/athletes/${a.id}`} className="text-sm underline">

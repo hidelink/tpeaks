@@ -14,12 +14,12 @@ export default async function Home() {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-6 px-6 text-center">
         <h1 className="text-3xl font-semibold tracking-tight">TPeaks</h1>
-        <p className="max-w-md text-zinc-600 dark:text-zinc-400">
+        <p className="max-w-md text-zinc-600">
           Entrenamiento para coaches y corredores. Simple, moderno, enfocado en running.
         </p>
         <Link
           href="/sign-in"
-          className="rounded-full bg-black px-6 py-3 text-sm font-medium text-white dark:bg-white dark:text-black"
+          className="rounded-full bg-black px-6 py-3 text-sm font-medium text-white"
         >
           Iniciar sesión
         </Link>

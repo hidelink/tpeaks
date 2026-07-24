@@ -10,7 +10,7 @@ export default function BillingGatePage() {
       <h1 className="text-2xl font-semibold tracking-tight">
         Tu equipo no tiene una suscripción activa
       </h1>
-      <p className="max-w-md text-zinc-600 dark:text-zinc-400">
+      <p className="max-w-md text-zinc-600">
         Contacta a tu coach para reactivar el acceso. Podrás ver tu calendario
         de entrenamientos en cuanto la suscripción del equipo esté al día.
       </p>

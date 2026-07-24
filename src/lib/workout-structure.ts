@@ -29,3 +29,33 @@ export type WorkoutStructure = z.infer<typeof workoutStructureSchema>;
 export function parseWorkoutStructure(value: unknown): WorkoutStructure {
   return workoutStructureSchema.parse(value);
 }
+
+const SEGMENT_FIELD_LABELS: Record<string, string> = {
+  label: "Etiqueta",
+  repeat: "Repeticiones",
+  distanceMeters: "Distancia",
+  durationSeconds: "Duración",
+  targetPace: "Ritmo objetivo",
+  targetRpe: "RPE",
+  note: "Nota",
+};
+
+/**
+ * Igual que parseWorkoutStructure, pero convierte el ZodError crudo en un
+ * mensaje legible en español para mostrar directo en la UI (ver
+ * src/lib/actions/templates.ts y schedule.ts).
+ */
+export function parseWorkoutStructureInput(value: unknown): WorkoutStructure {
+  const result = workoutStructureSchema.safeParse(value);
+  if (result.success) return result.data;
+
+  const messages = result.error.issues.map((issue) => {
+    const segmentIndex = issue.path[1];
+    const field = issue.path[2];
+    if (typeof segmentIndex !== "number") return issue.message;
+    const label = typeof field === "string" ? (SEGMENT_FIELD_LABELS[field] ?? field) : "segmento";
+    return `Segmento ${segmentIndex + 1} — ${label}: ${issue.message}`;
+  });
+
+  throw new Error(messages.join(" · "));
+}

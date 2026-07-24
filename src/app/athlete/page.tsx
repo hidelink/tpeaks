@@ -35,11 +35,11 @@ export default async function AthleteDashboardPage() {
       <h1 className="text-2xl font-semibold tracking-tight">Hola, {membership.user.name}</h1>
 
       <div className="grid grid-cols-3 gap-4">
-        <div className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
+        <div className="rounded-xl border border-zinc-200 p-4">
           <p className="text-sm text-zinc-500">Completados (semana)</p>
           <p className="text-2xl font-semibold">{completed.length}/{weekWorkouts.length}</p>
         </div>
-        <div className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
+        <div className="rounded-xl border border-zinc-200 p-4">
           <p className="text-sm text-zinc-500">Km semanales</p>
           <p className="text-2xl font-semibold">{totalKm.toFixed(1)}</p>
         </div>
@@ -48,7 +48,7 @@ export default async function AthleteDashboardPage() {
       {nextWorkout && (
         <Link
           href={`/workout/${nextWorkout.id}`}
-          className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800"
+          className="rounded-xl border border-zinc-200 p-4"
         >
           <p className="text-sm text-zinc-500">Próximo entrenamiento</p>
           <p className="font-medium">{nextWorkout.title}</p>

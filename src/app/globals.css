@@ -1,6 +1,13 @@
 @import "tailwindcss";
 
+/*
+ * TPeaks siempre usa un tema claro, sin importar el modo del sistema
+ * operativo. Esto evita que los controles nativos del navegador (el ícono
+ * del selector de fecha, scrollbars, etc.) se rendericen en modo oscuro y
+ * pierdan contraste contra el resto de la UI en modo claro.
+ */
 :root {
+  color-scheme: light;
   --background: #ffffff;
   --foreground: #171717;
 }
@@ -10,13 +17,6 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {

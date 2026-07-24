@@ -37,7 +37,7 @@ export default async function AthleteProfilePage({
       </div>
 
       {athlete.athleteProfile?.coachPrivateNote && (
-        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm dark:border-amber-800 dark:bg-amber-950">
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm">
           <p className="mb-1 font-medium">Nota privada (solo tú la ves)</p>
           <p>{athlete.athleteProfile.coachPrivateNote}</p>
         </div>
@@ -45,7 +45,7 @@ export default async function AthleteProfilePage({
 
       <div>
         <h2 className="mb-3 text-lg font-medium">Historial</h2>
-        <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
+        <ul className="divide-y divide-zinc-200">
           {history.map((w) => (
             <li key={w.id} className="flex items-center justify-between py-3">
               <div>

@@ -25,7 +25,7 @@ export default async function AthleteCalendarPage() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-7">
         {days.map((day) => (
-          <div key={day.toISOString()} className="rounded-xl border border-zinc-200 p-3 dark:border-zinc-800">
+          <div key={day.toISOString()} className="rounded-xl border border-zinc-200 p-3">
             <p className="mb-2 text-sm font-medium capitalize">
               {format(day, "EEEE d", { locale: es })}
             </p>
@@ -36,7 +36,7 @@ export default async function AthleteCalendarPage() {
                   <Link
                     key={w.id}
                     href={`/workout/${w.id}`}
-                    className="rounded-lg bg-zinc-100 px-2 py-1 text-xs dark:bg-zinc-900"
+                    className="rounded-lg bg-zinc-100 px-2 py-1 text-xs"
                   >
                     <p className="font-medium">{w.title}</p>
                     <p className="text-zinc-500">{w.status}</p>

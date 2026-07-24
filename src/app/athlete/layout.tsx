@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { UserButton } from "@clerk/nextjs";
 import { getCurrentMembership } from "@/lib/permissions";
+import { AppHeader } from "@/components/AppHeader";
+import { ATHLETE_NAV_LINKS } from "@/lib/nav-links";
 
 export default async function AthleteLayout({
   children,
@@ -23,14 +23,7 @@ export default async function AthleteLayout({
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="flex items-center justify-between border-b border-zinc-200 px-6 py-4 dark:border-zinc-800">
-        <nav className="flex items-center gap-6 text-sm font-medium">
-          <span className="font-semibold">{membership.team.name}</span>
-          <Link href="/athlete">Dashboard</Link>
-          <Link href="/athlete/calendar">Calendario</Link>
-        </nav>
-        <UserButton />
-      </header>
+      <AppHeader teamName={membership.team.name} links={ATHLETE_NAV_LINKS} />
       <main className="flex-1 px-6 py-8">{children}</main>
     </div>
   );

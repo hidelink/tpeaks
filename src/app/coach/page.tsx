@@ -48,7 +48,7 @@ export default async function CoachDashboardPage() {
             Aún no tienes atletas. Ve a &quot;Atletas&quot; para agregar el primero.
           </p>
         ) : (
-          <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
+          <ul className="divide-y divide-zinc-200">
             {athletes.map((a) => {
               const own = scheduledThisWeek.filter(
                 (w) => w.athleteMembershipId === a.id,
@@ -72,7 +72,7 @@ export default async function CoachDashboardPage() {
 
 function MetricCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-xl border border-zinc-200 p-4 dark:border-zinc-800">
+    <div className="rounded-xl border border-zinc-200 p-4">
       <p className="text-sm text-zinc-500">{label}</p>
       <p className="text-2xl font-semibold">{value}</p>
     </div>
