@@ -69,6 +69,18 @@ Pendiente (ver Paso 8 del spec, "Should have"/"Nice to have"): drag-and-drop rea
 
 No construido todavía (a propósito, ver Paso 2 del spec): cobros reales con Stripe, theming/logo por equipo en runtime, integraciones con relojes/Strava.
 
+## Datos de prueba
+
+`scripts/seed-test-workouts.ts` siembra ~4 semanas de entrenamientos (con feedback ya
+completado en las semanas pasadas) para un atleta que ya exista en tu base de datos —
+útil para ver la gráfica de carga con datos reales. Sigue un patrón deliberado de
+3 semanas construyendo + 1 de descarga.
+
+```bash
+npx tsx scripts/seed-test-workouts.ts [email-del-atleta]
+# default: member@yopmail.com
+```
+
 ## Verificación sin sesión activa
 
 Muchos de estos cambios se validaron con `tsc --noEmit`, `eslint` y `next build` — no con pruebas visuales en el navegador, porque el asistente no tiene forma de iniciar sesión con tu cuenta de Clerk. Antes de darlo por bueno del todo, prueba manualmente: crear/editar una plantilla, asignar/editar/duplicar un entrenamiento, y navegar entre semanas en ambos calendarios (coach y atleta).
