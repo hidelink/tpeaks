@@ -1,10 +1,13 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import { prisma } from "@/lib/prisma";
 import { getCurrentMembership } from "@/lib/permissions";
 import { getWeeklyLoadSeries } from "@/lib/training-load";
 import { TrainingLoadChart } from "@/components/TrainingLoadChart";
+import { toLocalCalendarDate } from "@/lib/calendar-date";
+import { PrivateNoteForm } from "./PrivateNoteForm";
 
 export default async function AthleteProfilePage({
   params,
@@ -41,12 +44,10 @@ export default async function AthleteProfilePage({
         <p className="text-sm text-zinc-500">{athlete.user.email}</p>
       </div>
 
-      {athlete.athleteProfile?.coachPrivateNote && (
-        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm">
-          <p className="mb-1 font-medium">Nota privada (solo tú la ves)</p>
-          <p>{athlete.athleteProfile.coachPrivateNote}</p>
-        </div>
-      )}
+      <PrivateNoteForm
+        athleteMembershipId={athlete.id}
+        initialNote={athlete.athleteProfile?.coachPrivateNote ?? ""}
+      />
 
       <div className="rounded-xl border border-zinc-200 p-4">
         <h2 className="mb-1 font-medium">Carga de entrenamiento</h2>
@@ -65,7 +66,9 @@ export default async function AthleteProfilePage({
                 <Link href={`/workout/${w.id}`} className="font-medium underline">
                   {w.title}
                 </Link>
-                <p className="text-sm text-zinc-500">{format(w.date, "d MMM yyyy")}</p>
+                <p className="text-sm text-zinc-500">
+                  {format(toLocalCalendarDate(w.date), "d MMM yyyy", { locale: es })}
+                </p>
               </div>
               <span className="text-sm text-zinc-500">
                 {w.status === "COMPLETED"

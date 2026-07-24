@@ -4,6 +4,7 @@ import { es } from "date-fns/locale";
 import { prisma } from "@/lib/prisma";
 import { getCurrentMembership } from "@/lib/permissions";
 import { getCurrentWeekRange } from "@/lib/dates";
+import { toLocalCalendarDate, todayAsUtcMidnight } from "@/lib/calendar-date";
 import { assertAthleteTeamAccess } from "@/lib/subscription-gate";
 import { getWeeklyLoadSeries } from "@/lib/training-load";
 import { TrainingLoadChart } from "@/components/TrainingLoadChart";
@@ -24,7 +25,7 @@ export default async function AthleteDashboardPage() {
       where: {
         athleteMembershipId: membership.id,
         status: "PLANNED",
-        date: { gte: new Date(new Date().toDateString()) },
+        date: { gte: todayAsUtcMidnight() },
       },
       orderBy: { date: "asc" },
     }),
@@ -57,7 +58,7 @@ export default async function AthleteDashboardPage() {
           <p className="text-sm text-zinc-500">Próximo entrenamiento</p>
           <p className="font-medium">{nextWorkout.title}</p>
           <p className="text-sm text-zinc-500 capitalize">
-            {format(nextWorkout.date, "EEEE d MMMM", { locale: es })}
+            {format(toLocalCalendarDate(nextWorkout.date), "EEEE d MMMM", { locale: es })}
           </p>
         </Link>
       )}

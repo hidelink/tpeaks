@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getCurrentMembership } from "@/lib/permissions";
 import { parseWorkoutStructure } from "@/lib/workout-structure";
+import { DeleteTemplateButton } from "./DeleteTemplateButton";
 
 export default async function CoachTemplatesPage() {
   const membership = await getCurrentMembership();
@@ -53,12 +54,12 @@ export default async function CoachTemplatesPage() {
                     ))}
                   </div>
                 )}
-                <Link
-                  href={`/coach/templates/${t.id}/edit`}
-                  className="mt-3 inline-block text-xs underline"
-                >
-                  Editar
-                </Link>
+                <div className="mt-3 flex items-center gap-3">
+                  <Link href={`/coach/templates/${t.id}/edit`} className="text-xs underline">
+                    Editar
+                  </Link>
+                  <DeleteTemplateButton templateId={t.id} title={t.title} />
+                </div>
               </li>
             );
           })}

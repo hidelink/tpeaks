@@ -451,18 +451,18 @@ Esto es lo que copia `ScheduledWorkout.structure` desde `WorkoutTemplate.structu
 
 **Must have (Fase 1 — sin esto no hay producto)**
 - [x] Auth + creación de Team + invitación de atletas.
-- [x] CRUD de `WorkoutTemplate` con editor de estructura (segmentos) — falta eliminar plantillas.
+- [x] CRUD de `WorkoutTemplate` con editor de estructura (segmentos), incluye borrar.
 - [x] Asignación de entrenamientos al calendario (crear `ScheduledWorkout`).
-- [x] Vista de calendario para atleta (semana, navegable) + detalle de entrenamiento — falta vista mensual.
+- [x] Vista de calendario para atleta (semana y mes, navegable) + detalle de entrenamiento.
 - [x] Marcar completado + formulario de feedback manual.
 - [x] Vista de cumplimiento del coach por atleta + comentarios en entrenamientos.
 - [x] Dashboard con las 4 métricas pedidas (programados, completados, cumplimiento semanal, km semanales).
 
 **Should have (Fase 1, pero después del loop core)**
 - [x] Editar / mover / copiar / duplicar entrenamientos — vía formularios explícitos (editar fecha = mover, botón duplicar/copiar), no drag-and-drop todavía.
-- [x] Notas del coach al atleta (a nivel entrenamiento; falta a nivel perfil de atleta).
+- [x] Notas del coach al atleta (a nivel entrenamiento y a nivel perfil de atleta).
+- [x] Filtros de calendario — por atleta (dropdown) y por título (búsqueda de texto; "tipo" no es un campo propio de `ScheduledWorkout`, el título es el proxy usado).
 - [ ] Notificaciones in-app (no email todavía) de comentarios nuevos.
-- [ ] Filtros de calendario (por tipo de entrenamiento, por atleta).
 - [ ] Drag-and-drop real en el calendario (mejora sobre los botones explícitos de arriba).
 
 **Nice to have (después de validar Fase 1)**
@@ -523,4 +523,4 @@ necesitar reloj/HR (eso es Fase 3). Decisiones:
 - **Arquitectura:** no fusionar `ScheduledWorkout` con `ExternalActivity` nunca, ni como atajo — es la decisión que más dolor evita en Fase 3.
 - **Arquitectura:** el gate de suscripción debe vivir en una sola función server-side reutilizada en todas las rutas de atleta — si se duplica la lógica, alguna ruta se queda sin proteger.
 - **Costo/dependencia:** no depender de roles custom de pago de Clerk; los permisos finos viven en tu propia base de datos.
-- **Timezone:** `ScheduledWorkout.date` se guarda como fecha pura (sin hora) para evitar bugs de "el entrenamiento apareció en el día equivocado" entre coach y atleta en zonas horarias distintas.
+- **Timezone (bug real encontrado y corregido):** `ScheduledWorkout.date` se guarda como fecha pura (`@db.Date`), pero Prisma la devuelve como medianoche UTC — leerla con date-fns en hora LOCAL (`format`, `isSameDay`, `startOfWeek`) en cualquier servidor detrás de UTC (todo Latinoamérica) la mostraba/agrupaba un día antes del real. Confirmado empíricamente corriendo en America/Mexico_City. Arreglado con `toLocalCalendarDate()`/`todayAsUtcMidnight()` en `src/lib/calendar-date.ts`, aplicado en cada punto donde se lee esa fecha (calendarios, detalle, edición, cálculo de carga). Regla para código nuevo: cualquier valor `date`/`completedAt` que venga de la base de datos y vaya a una función de date-fns no explícitamente UTC debe pasar primero por `toLocalCalendarDate`.

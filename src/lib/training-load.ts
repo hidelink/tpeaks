@@ -1,5 +1,6 @@
 import { startOfWeek, subWeeks } from "date-fns";
 import { prisma } from "@/lib/prisma";
+import { toLocalCalendarDate } from "@/lib/calendar-date";
 
 /**
  * Carga de entrenamiento por sRPE (session RPE): RPE (1-10) × duración en
@@ -46,7 +47,7 @@ export async function getWeeklyLoadSeries(
 
   const loadByWeekKey = new Map<string, number>();
   for (const c of completions) {
-    const weekStart = startOfWeek(c.scheduledWorkout.date, { weekStartsOn: 1 });
+    const weekStart = startOfWeek(toLocalCalendarDate(c.scheduledWorkout.date), { weekStartsOn: 1 });
     const key = weekStart.toISOString();
     const load = (c.rpe ?? 0) * (c.durationMinutes ?? 0);
     loadByWeekKey.set(key, (loadByWeekKey.get(key) ?? 0) + load);

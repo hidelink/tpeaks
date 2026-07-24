@@ -46,13 +46,17 @@ src/lib/subscription-gate.ts   gate de suscripción (Fase 2), hoy siempre permit
 src/lib/workout-structure.ts   contrato Zod de la estructura de un entrenamiento
 src/lib/actions/                Server Actions (crear/editar plantilla, asignar/editar/duplicar entrenamiento, marcar completado, comentar)
 src/lib/clerk-sync.ts          upsert de Team/User/TeamMembership desde datos de Clerk (usado por el webhook y como fallback sync-on-read)
-src/lib/dates.ts               rango de semana + navegación entre semanas (?week=yyyy-MM-dd) del calendario
+src/lib/dates.ts               rangos de semana/mes + navegación (?date=yyyy-MM-dd&view=week|month) del calendario
+src/lib/calendar-date.ts       toLocalCalendarDate/todayAsUtcMidnight — normaliza fechas @db.Date (ver nota de timezone abajo)
+src/lib/calendar-url.ts        construye URLs de calendario preservando filtros activos
 src/lib/nav-links.ts           links de navegación por rol, compartidos entre los layouts de coach/atleta y /workout/[id]
 src/components/AppHeader.tsx     header con nav compartido (coach, atleta, y /workout/[id] que vive fuera de ambos árboles)
 src/components/SegmentEditor.tsx  editor de segmentos compartido entre plantillas, asignación ad hoc y edición
 src/components/TemplateForm.tsx   formulario compartido entre crear y editar una plantilla
+src/components/CalendarFilterBar.tsx  filtro por atleta (coach) + búsqueda por título, form GET nativo
 src/middleware.ts               Clerk middleware (protege todas las rutas salvo /sign-in, /sign-up, webhooks)
 src/lib/actions/invite.ts       invitar/revocar atleta vía la API de invitaciones de Clerk Organizations
+src/lib/actions/athlete-profile.ts  nota privada del coach sobre un atleta
 src/lib/training-load.ts       carga de entrenamiento por sRPE (RPE × duración), semanal + promedio móvil de 4 semanas
 src/components/TrainingLoadChart.tsx  gráfica de carga (barras + línea de referencia), en dashboard de atleta y perfil que ve el coach
 src/app/coach/                  rutas y layout del coach
@@ -63,11 +67,23 @@ src/app/api/webhooks/clerk/     sincroniza User/Team/TeamMembership desde Clerk
 
 ## Estado actual (MVP Fase 1, en construcción)
 
-Ya funciona (una vez conectada la base de datos y Clerk): auth + creación de equipo vía Clerk Organizations (con onboarding para crear el equipo si el usuario no tiene uno todavía), invitar/revocar atletas por email (invitación real de Clerk Organizations, ya no un placeholder), sincronización de usuarios/equipos por webhook o al vuelo si el webhook no está configurado, dashboard de coach y atleta con las 4 métricas, calendario semanal navegable (anterior/siguiente/hoy), creación y edición de plantillas de entrenamiento con editor de segmentos, asignación de entrenamientos (desde plantilla o ad hoc) al calendario de un atleta, edición de un entrenamiento ya asignado (incluye "moverlo" cambiando la fecha), duplicar/copiar un entrenamiento a otra fecha o a otro atleta, detalle de entrenamiento con feedback manual del atleta y comentarios del coach, perfil de atleta con historial, y una gráfica de **carga de entrenamiento** (sRPE semanal + promedio móvil de 4 semanas) en el dashboard del atleta y en el perfil que ve el coach.
+Ya funciona (una vez conectada la base de datos y Clerk): auth + creación de equipo vía Clerk Organizations (con onboarding para crear el equipo si el usuario no tiene uno todavía), invitar/revocar atletas por email (invitación real de Clerk Organizations, ya no un placeholder), sincronización de usuarios/equipos por webhook o al vuelo si el webhook no está configurado, dashboard de coach y atleta con las 4 métricas, calendario **semanal y mensual** navegable (anterior/siguiente/hoy) con filtro por atleta y búsqueda por título, creación/edición/borrado de plantillas de entrenamiento con editor de segmentos, asignación de entrenamientos (desde plantilla o ad hoc) al calendario de un atleta, edición de un entrenamiento ya asignado (incluye "moverlo" cambiando la fecha), duplicar/copiar un entrenamiento a otra fecha o a otro atleta, detalle de entrenamiento con feedback manual del atleta y comentarios del coach, perfil de atleta con historial + nota privada del coach editable, y una gráfica de **carga de entrenamiento** (sRPE semanal + promedio móvil de 4 semanas) en el dashboard del atleta y en el perfil que ve el coach.
 
-Pendiente (ver Paso 8 del spec, "Should have"/"Nice to have"): drag-and-drop real en el calendario (mover/duplicar hoy se hacen desde botones explícitos, no arrastrando); vista mensual del calendario (hoy es semanal con navegación); notificaciones in-app de comentarios nuevos; filtros de calendario por atleta/tipo.
+Pendiente (ver Paso 8 del spec, "Nice to have"): drag-and-drop real en el calendario (mover/duplicar hoy se hacen desde botones explícitos, no arrastrando); notificaciones in-app de comentarios nuevos.
 
 No construido todavía (a propósito, ver Paso 2 del spec): cobros reales con Stripe, theming/logo por equipo en runtime, integraciones con relojes/Strava.
+
+### Nota importante: timezone en fechas de entrenamiento
+
+`ScheduledWorkout.date` es `@db.Date` en Postgres — Prisma la devuelve como medianoche UTC.
+En cualquier servidor con timezone detrás de UTC (todo Latinoamérica incluida), leerla con
+funciones de date-fns en hora local (`format`, `isSameDay`, `startOfWeek`) la mostraba/agrupaba
+**un día antes** del real — lo confirmé empíricamente corriendo la app en este entorno
+(America/Mexico_City). Ya está arreglado (`src/lib/calendar-date.ts`,
+`toLocalCalendarDate`/`todayAsUtcMidnight`, aplicado en cada punto donde se leía esa fecha),
+pero si notaste antes que un entrenamiento aparecía en el día equivocado en el calendario, en
+el detalle, o al editarlo — era este bug. Vale la pena que confirmes ahora que las fechas se
+ven correctas en tu propia sesión.
 
 ## Datos de prueba
 

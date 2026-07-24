@@ -71,3 +71,22 @@ export async function updateWorkoutTemplate(
   revalidatePath("/coach/templates");
   return { id: templateId };
 }
+
+/**
+ * Borrar una plantilla no afecta entrenamientos ya asignados desde ella:
+ * ScheduledWorkout.templateId es ON DELETE SET NULL (ver migration.sql) y
+ * structure ya es un snapshot independiente — el entrenamiento programado
+ * sigue existiendo tal cual, solo pierde el vínculo a la plantilla borrada.
+ */
+export async function deleteWorkoutTemplate(templateId: string) {
+  const membership = await requireRole("COACH");
+
+  const existing = await prisma.workoutTemplate.findFirst({
+    where: { id: templateId, teamId: membership.teamId },
+  });
+  if (!existing) throw new ForbiddenError("Esa plantilla no es de tu equipo.");
+
+  await prisma.workoutTemplate.delete({ where: { id: templateId } });
+
+  revalidatePath("/coach/templates");
+}

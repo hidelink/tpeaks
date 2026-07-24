@@ -5,6 +5,7 @@ import { es } from "date-fns/locale";
 import { prisma } from "@/lib/prisma";
 import { getCurrentMembership } from "@/lib/permissions";
 import { parseWorkoutStructure } from "@/lib/workout-structure";
+import { toLocalCalendarDate } from "@/lib/calendar-date";
 import { CompletionForm } from "./CompletionForm";
 import { CommentForm } from "./CommentForm";
 import { DuplicateWorkoutForm } from "./DuplicateWorkoutForm";
@@ -51,6 +52,7 @@ export default async function WorkoutDetailPage({
 
   const structure = parseWorkoutStructure(workout.structure);
   const status = STATUS_STYLES[workout.status] ?? STATUS_STYLES.PLANNED;
+  const localDate = toLocalCalendarDate(workout.date);
 
   const totalDistanceMeters = structure.segments.reduce(
     (sum, s) => sum + (s.distanceMeters ?? 0) * s.repeat,
@@ -66,7 +68,7 @@ export default async function WorkoutDetailPage({
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-sm text-zinc-500 capitalize">
-            {format(workout.date, "EEEE d 'de' MMMM", { locale: es })}
+            {format(localDate, "EEEE d 'de' MMMM", { locale: es })}
           </p>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight">{workout.title}</h1>
           {membership.role === "COACH" && (
@@ -82,7 +84,7 @@ export default async function WorkoutDetailPage({
         {membership.role === "COACH" && (
           <div className="flex shrink-0 flex-col items-end gap-2">
             <Link
-              href={`/coach/schedule/new?date=${format(workout.date, "yyyy-MM-dd")}&athleteId=${workout.athleteMembershipId}`}
+              href={`/coach/schedule/new?date=${format(localDate, "yyyy-MM-dd")}&athleteId=${workout.athleteMembershipId}`}
               className="rounded-full bg-black px-4 py-2 text-sm font-medium whitespace-nowrap text-white"
             >
               + Asignar otro
@@ -188,7 +190,7 @@ export default async function WorkoutDetailPage({
           workoutId={workout.id}
           athletes={athletes.map((a) => ({ id: a.id, name: a.user.name }))}
           defaultAthleteId={workout.athleteMembershipId}
-          defaultDate={format(workout.date, "yyyy-MM-dd")}
+          defaultDate={format(localDate, "yyyy-MM-dd")}
         />
       )}
 

@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import { getCurrentMembership } from "@/lib/permissions";
 import { parseWorkoutStructure } from "@/lib/workout-structure";
+import { toLocalCalendarDate } from "@/lib/calendar-date";
 import { EditWorkoutForm } from "./EditWorkoutForm";
 
 export default async function EditScheduledWorkoutPage({
@@ -29,7 +30,7 @@ export default async function EditScheduledWorkoutPage({
       <EditWorkoutForm
         workoutId={workout.id}
         initial={{
-          date: format(workout.date, "yyyy-MM-dd"),
+          date: format(toLocalCalendarDate(workout.date), "yyyy-MM-dd"),
           title: workout.title,
           coachNote: workout.coachNote ?? undefined,
           structure: parseWorkoutStructure(workout.structure),
