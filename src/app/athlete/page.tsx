@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import { prisma } from "@/lib/prisma";
 import { getCurrentMembership } from "@/lib/permissions";
 import { getCurrentWeekRange } from "@/lib/dates";
 import { assertAthleteTeamAccess } from "@/lib/subscription-gate";
+import { getWeeklyLoadSeries } from "@/lib/training-load";
+import { TrainingLoadChart } from "@/components/TrainingLoadChart";
 
 export default async function AthleteDashboardPage() {
   const membership = await getCurrentMembership();
@@ -12,7 +15,7 @@ export default async function AthleteDashboardPage() {
 
   const { start, end } = getCurrentWeekRange();
 
-  const [weekWorkouts, nextWorkout] = await Promise.all([
+  const [weekWorkouts, nextWorkout, loadSeries] = await Promise.all([
     prisma.scheduledWorkout.findMany({
       where: { athleteMembershipId: membership.id, date: { gte: start, lte: end } },
       include: { completion: true },
@@ -25,6 +28,7 @@ export default async function AthleteDashboardPage() {
       },
       orderBy: { date: "asc" },
     }),
+    getWeeklyLoadSeries(membership.id),
   ]);
 
   const completed = weekWorkouts.filter((w) => w.status === "COMPLETED");
@@ -52,9 +56,19 @@ export default async function AthleteDashboardPage() {
         >
           <p className="text-sm text-zinc-500">Próximo entrenamiento</p>
           <p className="font-medium">{nextWorkout.title}</p>
-          <p className="text-sm text-zinc-500">{format(nextWorkout.date, "EEEE d MMMM")}</p>
+          <p className="text-sm text-zinc-500 capitalize">
+            {format(nextWorkout.date, "EEEE d MMMM", { locale: es })}
+          </p>
         </Link>
       )}
+
+      <div className="rounded-xl border border-zinc-200 p-4">
+        <h2 className="mb-1 font-medium">Carga de entrenamiento</h2>
+        <p className="mb-4 text-xs text-zinc-500">
+          RPE × duración de cada entrenamiento completado, sumado por semana.
+        </p>
+        <TrainingLoadChart data={loadSeries} />
+      </div>
     </div>
   );
 }

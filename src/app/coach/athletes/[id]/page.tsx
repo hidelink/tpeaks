@@ -3,6 +3,8 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import { getCurrentMembership } from "@/lib/permissions";
+import { getWeeklyLoadSeries } from "@/lib/training-load";
+import { TrainingLoadChart } from "@/components/TrainingLoadChart";
 
 export default async function AthleteProfilePage({
   params,
@@ -22,12 +24,15 @@ export default async function AthleteProfilePage({
 
   if (!athlete) notFound();
 
-  const history = await prisma.scheduledWorkout.findMany({
-    where: { athleteMembershipId: athlete.id },
-    include: { completion: true },
-    orderBy: { date: "desc" },
-    take: 20,
-  });
+  const [history, loadSeries] = await Promise.all([
+    prisma.scheduledWorkout.findMany({
+      where: { athleteMembershipId: athlete.id },
+      include: { completion: true },
+      orderBy: { date: "desc" },
+      take: 20,
+    }),
+    getWeeklyLoadSeries(athlete.id, 8),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -42,6 +47,14 @@ export default async function AthleteProfilePage({
           <p>{athlete.athleteProfile.coachPrivateNote}</p>
         </div>
       )}
+
+      <div className="rounded-xl border border-zinc-200 p-4">
+        <h2 className="mb-1 font-medium">Carga de entrenamiento</h2>
+        <p className="mb-4 text-xs text-zinc-500">
+          RPE × duración de cada entrenamiento completado, sumado por semana (últimas 8).
+        </p>
+        <TrainingLoadChart data={loadSeries} />
+      </div>
 
       <div>
         <h2 className="mb-3 text-lg font-medium">Historial</h2>

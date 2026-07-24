@@ -53,6 +53,8 @@ src/components/SegmentEditor.tsx  editor de segmentos compartido entre plantilla
 src/components/TemplateForm.tsx   formulario compartido entre crear y editar una plantilla
 src/middleware.ts               Clerk middleware (protege todas las rutas salvo /sign-in, /sign-up, webhooks)
 src/lib/actions/invite.ts       invitar/revocar atleta vía la API de invitaciones de Clerk Organizations
+src/lib/training-load.ts       carga de entrenamiento por sRPE (RPE × duración), semanal + promedio móvil de 4 semanas
+src/components/TrainingLoadChart.tsx  gráfica de carga (barras + línea de referencia), en dashboard de atleta y perfil que ve el coach
 src/app/coach/                  rutas y layout del coach
 src/app/athlete/                rutas y layout del atleta
 src/app/workout/[id]/           detalle de entrenamiento compartido (render condicional por rol), con su propio layout + edición + duplicar
@@ -61,7 +63,7 @@ src/app/api/webhooks/clerk/     sincroniza User/Team/TeamMembership desde Clerk
 
 ## Estado actual (MVP Fase 1, en construcción)
 
-Ya funciona (una vez conectada la base de datos y Clerk): auth + creación de equipo vía Clerk Organizations (con onboarding para crear el equipo si el usuario no tiene uno todavía), invitar/revocar atletas por email (invitación real de Clerk Organizations, ya no un placeholder), sincronización de usuarios/equipos por webhook o al vuelo si el webhook no está configurado, dashboard de coach y atleta con las 4 métricas, calendario semanal navegable (anterior/siguiente/hoy), creación y edición de plantillas de entrenamiento con editor de segmentos, asignación de entrenamientos (desde plantilla o ad hoc) al calendario de un atleta, edición de un entrenamiento ya asignado (incluye "moverlo" cambiando la fecha), duplicar/copiar un entrenamiento a otra fecha o a otro atleta, detalle de entrenamiento con feedback manual del atleta y comentarios del coach, perfil de atleta con historial.
+Ya funciona (una vez conectada la base de datos y Clerk): auth + creación de equipo vía Clerk Organizations (con onboarding para crear el equipo si el usuario no tiene uno todavía), invitar/revocar atletas por email (invitación real de Clerk Organizations, ya no un placeholder), sincronización de usuarios/equipos por webhook o al vuelo si el webhook no está configurado, dashboard de coach y atleta con las 4 métricas, calendario semanal navegable (anterior/siguiente/hoy), creación y edición de plantillas de entrenamiento con editor de segmentos, asignación de entrenamientos (desde plantilla o ad hoc) al calendario de un atleta, edición de un entrenamiento ya asignado (incluye "moverlo" cambiando la fecha), duplicar/copiar un entrenamiento a otra fecha o a otro atleta, detalle de entrenamiento con feedback manual del atleta y comentarios del coach, perfil de atleta con historial, y una gráfica de **carga de entrenamiento** (sRPE semanal + promedio móvil de 4 semanas) en el dashboard del atleta y en el perfil que ve el coach.
 
 Pendiente (ver Paso 8 del spec, "Should have"/"Nice to have"): drag-and-drop real en el calendario (mover/duplicar hoy se hacen desde botones explícitos, no arrastrando); vista mensual del calendario (hoy es semanal con navegación); notificaciones in-app de comentarios nuevos; filtros de calendario por atleta/tipo.
 

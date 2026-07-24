@@ -470,7 +470,32 @@ Esto es lo que copia `ScheduledWorkout.structure` desde `WorkoutTemplate.structu
 - Exportar historial del atleta a CSV/PDF.
 - Recordatorios por email del entrenamiento del día.
 - Roles de coach asistente con permisos limitados.
-- Analítica de tendencia (progreso de ritmo/volumen en el tiempo).
+- [x] Analítica de tendencia — carga de entrenamiento semanal (sRPE) + promedio móvil de 4 semanas, ver abajo.
+
+### Carga de entrenamiento (sRPE)
+
+Se agregó antes de lo planeado porque resuelve una pregunta real de coaching: ver si un
+atleta está construyendo carga de forma sostenida o si hubo un pico de riesgo, sin
+necesitar reloj/HR (eso es Fase 3). Decisiones:
+
+- **Métrica: sRPE** = `RPE (1-10) × duración en minutos` de `WorkoutCompletion` — el
+  método estándar de ciencia del deporte cuando no hay datos de wearable, y ya
+  teníamos ambos campos.
+- **Solo carga real, no planeada.** `targetRpe` por segmento es opcional en el editor
+  (decisión explícita para no forzar campos), así que una carga "planeada" sería un
+  estimado poco confiable hoy. Si en algún momento se vuelve consistente pedir
+  `targetRpe` al crear entrenamientos, se puede agregar una serie planeada en paralelo
+  sin tocar `getWeeklyLoadSeries`.
+- **Agregación por semana (lunes-domingo)**, asignada a `ScheduledWorkout.date` (el día
+  para el que era el entrenamiento), no a `completedAt` — un feedback mandado tarde no
+  distorsiona la semana a la que pertenece.
+- **Referencia crónica** = promedio móvil de 4 semanas (semana actual + 3 anteriores),
+  mostrada como línea sobre las barras semanales — así se ve si una semana rompió el
+  patrón de construcción/descarga.
+- Vive en `src/lib/training-load.ts` (cálculo) + `src/components/TrainingLoadChart.tsx`
+  (gráfica SVG a mano, sin librería de charts). Se muestra en el dashboard del atleta
+  (12 semanas) y en el perfil que ve el coach (8 semanas, versión compacta) — no en
+  cada entrenamiento individual, ahí no aporta.
 
 ---
 
