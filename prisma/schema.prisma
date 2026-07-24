@@ -1,0 +1,251 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+//
+// Ver docs/PRODUCT_SPEC.md (Paso 4) para el razonamiento detrás de cada tabla.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum MembershipRole {
+  COACH
+  ATHLETE
+  // ASSISTANT_COACH -> valor futuro, no implementado en Fase 1
+}
+
+enum MembershipStatus {
+  INVITED
+  ACTIVE
+  REMOVED
+}
+
+enum WorkoutStatus {
+  PLANNED
+  COMPLETED
+  MISSED
+  SKIPPED
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  PAUSED
+}
+
+enum IntegrationProvider {
+  GARMIN
+  COROS
+  POLAR
+  SUUNTO
+  APPLE_HEALTH
+  STRAVA
+}
+
+model Team {
+  id           String  @id @default(cuid())
+  // Vincula este Team con su Clerk Organization — Clerk maneja identidad e
+  // invitaciones; nuestra tabla decide roles finos y permisos (ver Paso 3).
+  clerkOrgId   String  @unique
+  name         String
+  slug         String  @unique
+  logoUrl      String?
+  primaryColor String?
+
+  // Fase 2 — el gate de suscripción no se activa hasta entonces,
+  // pero el campo existe desde hoy para no requerir una migración después.
+  subscriptionStatus SubscriptionStatus @default(TRIALING)
+  stripeCustomerId   String?            @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships  TeamMembership[]
+  templates    WorkoutTemplate[]
+  scheduled    ScheduledWorkout[]
+  subscription Subscription?
+}
+
+model User {
+  id          String   @id @default(cuid())
+  clerkUserId String   @unique
+  email       String   @unique
+  name        String
+  avatarUrl   String?
+  createdAt   DateTime @default(now())
+
+  memberships TeamMembership[]
+}
+
+model TeamMembership {
+  id        String           @id @default(cuid())
+  teamId    String
+  userId    String
+  role      MembershipRole
+  status    MembershipStatus @default(ACTIVE)
+  createdAt DateTime         @default(now())
+
+  team Team @relation(fields: [teamId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  athleteProfile     AthleteProfile?
+  scheduledAsAthlete ScheduledWorkout[] @relation("AthleteSchedules")
+  scheduledAsCoach   ScheduledWorkout[] @relation("CoachSchedules")
+  coachComments      CoachComment[]
+  integrations       Integration[]
+
+  @@unique([teamId, userId])
+}
+
+model AthleteProfile {
+  id               String    @id @default(cuid())
+  membershipId     String    @unique
+  dateOfBirth      DateTime?
+  sex              String?
+  // Notas privadas del coach: nunca se exponen al atleta en ninguna pantalla/API.
+  coachPrivateNote String?
+  createdAt        DateTime  @default(now())
+
+  membership TeamMembership @relation(fields: [membershipId], references: [id])
+}
+
+model WorkoutTemplate {
+  id          String   @id @default(cuid())
+  teamId      String
+  createdById String
+  title       String
+  description String?
+  // Ver el contrato Zod en src/lib/workout-structure.ts — no es un blob libre.
+  structure   Json
+  tags        String[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  team      Team               @relation(fields: [teamId], references: [id])
+  scheduled ScheduledWorkout[]
+}
+
+model ScheduledWorkout {
+  id                  String        @id @default(cuid())
+  teamId              String
+  athleteMembershipId String
+  coachMembershipId   String
+  templateId          String?
+  // Solo fecha, sin hora: evita bugs de "apareció en el día equivocado"
+  // cuando coach y atleta están en zonas horarias distintas.
+  date                DateTime      @db.Date
+  title               String
+  // Snapshot copiado de WorkoutTemplate.structure al momento de asignar.
+  // Editar la plantilla después NO debe alterar esto retroactivamente.
+  structure           Json
+  coachNote           String?
+  status              WorkoutStatus @default(PLANNED)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  team     Team             @relation(fields: [teamId], references: [id])
+  athlete  TeamMembership   @relation("AthleteSchedules", fields: [athleteMembershipId], references: [id])
+  coach    TeamMembership   @relation("CoachSchedules", fields: [coachMembershipId], references: [id])
+  template WorkoutTemplate? @relation(fields: [templateId], references: [id])
+
+  completion    WorkoutCompletion?
+  comments      CoachComment[]
+  activityLinks WorkoutActivityLink[]
+
+  @@index([teamId, athleteMembershipId, date])
+}
+
+model WorkoutCompletion {
+  id                 String   @id @default(cuid())
+  scheduledWorkoutId String   @unique
+  completedAt        DateTime @default(now())
+  durationMinutes    Int?
+  distanceKm         Float?
+  perceivedPace      String?
+  // RPE (Rate of Perceived Exertion), escala 1-10.
+  rpe                Int?
+  athleteComment     String?
+
+  scheduledWorkout ScheduledWorkout @relation(fields: [scheduledWorkoutId], references: [id])
+}
+
+model CoachComment {
+  id                 String   @id @default(cuid())
+  scheduledWorkoutId String
+  coachMembershipId  String
+  comment            String
+  createdAt          DateTime @default(now())
+
+  scheduledWorkout ScheduledWorkout @relation(fields: [scheduledWorkoutId], references: [id])
+  coach            TeamMembership   @relation(fields: [coachMembershipId], references: [id])
+}
+
+// ---- Fase 2: existe desde hoy, inactivo hasta que se conecte Stripe ----
+model Subscription {
+  id                   String             @id @default(cuid())
+  teamId               String             @unique
+  stripeSubscriptionId String?            @unique
+  status               SubscriptionStatus @default(TRIALING)
+  seatsIncluded        Int                @default(0)
+  currentPeriodEnd     DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  team Team @relation(fields: [teamId], references: [id])
+}
+
+// ---- Fase 3: existe desde hoy, sin sync jobs activos ----
+model Integration {
+  id                String              @id @default(cuid())
+  membershipId      String
+  provider          IntegrationProvider
+  externalAccountId String
+  // Cifrado a nivel de aplicación antes de persistir (ver docs/PRODUCT_SPEC.md, riesgos).
+  accessToken       String
+  refreshToken      String?
+  connectedAt       DateTime            @default(now())
+  lastSyncedAt      DateTime?
+
+  membership TeamMembership     @relation(fields: [membershipId], references: [id])
+  activities ExternalActivity[]
+
+  @@unique([membershipId, provider])
+}
+
+model ExternalActivity {
+  id              String   @id @default(cuid())
+  integrationId   String
+  externalId      String
+  startedAt       DateTime
+  durationSeconds Int?
+  distanceMeters  Float?
+  avgPaceSecPerKm Int?
+  avgHeartRate    Int?
+  rawPayload      Json?
+  createdAt       DateTime @default(now())
+
+  integration Integration           @relation(fields: [integrationId], references: [id])
+  links       WorkoutActivityLink[]
+
+  @@unique([integrationId, externalId])
+}
+
+model WorkoutActivityLink {
+  id                 String   @id @default(cuid())
+  scheduledWorkoutId String
+  externalActivityId String
+  // "auto" | "manual"
+  linkedBy           String
+  createdAt          DateTime @default(now())
+
+  scheduledWorkout ScheduledWorkout @relation(fields: [scheduledWorkoutId], references: [id])
+  externalActivity ExternalActivity @relation(fields: [externalActivityId], references: [id])
+
+  @@unique([scheduledWorkoutId, externalActivityId])
+}

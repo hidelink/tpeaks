@@ -161,6 +161,7 @@ enum IntegrationProvider {
 
 model Team {
   id                 String   @id @default(cuid())
+  clerkOrgId         String   @unique // vincula con la Organization de Clerk
   name               String
   slug               String   @unique
   logoUrl            String?

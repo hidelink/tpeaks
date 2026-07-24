@@ -1,0 +1,102 @@
+import { headers } from "next/headers";
+import { Webhook } from "svix";
+import { prisma } from "@/lib/prisma";
+import {
+  mapOrgRole,
+  upsertMembership,
+  upsertTeamFromClerkOrg,
+  upsertUserFromClerk,
+} from "@/lib/clerk-sync";
+
+/**
+ * Sincroniza identidad (Clerk) -> nuestra base de datos relacional.
+ * Clerk es la fuente de verdad de auth/organización; nosotros solo
+ * espejamos lo mínimo para poder hacer joins (Prisma) contra
+ * TeamMembership, WorkoutTemplate, etc.
+ *
+ * Esta es la fuente de verdad "normal"; src/lib/clerk-sync.ts también se usa
+ * desde getCurrentMembership() como fallback de sync-on-read cuando este
+ * webhook no está configurado (ej. local sin túnel) o llega con retraso.
+ *
+ * Configurar en el Clerk Dashboard -> Webhooks -> endpoint
+ * `${APP_URL}/api/webhooks/clerk`, eventos: user.created,
+ * organization.created, organizationMembership.created,
+ * organizationMembership.updated, organizationMembership.deleted.
+ */
+export async function POST(req: Request) {
+  const webhookSecret = process.env.CLERK_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    throw new Error("Falta CLERK_WEBHOOK_SECRET en las variables de entorno.");
+  }
+
+  const headerPayload = await headers();
+  const svixId = headerPayload.get("svix-id");
+  const svixTimestamp = headerPayload.get("svix-timestamp");
+  const svixSignature = headerPayload.get("svix-signature");
+
+  if (!svixId || !svixTimestamp || !svixSignature) {
+    return new Response("Faltan encabezados svix.", { status: 400 });
+  }
+
+  const body = await req.text();
+  const wh = new Webhook(webhookSecret);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let event: any;
+  try {
+    event = wh.verify(body, {
+      "svix-id": svixId,
+      "svix-timestamp": svixTimestamp,
+      "svix-signature": svixSignature,
+    });
+  } catch {
+    return new Response("Firma de webhook inválida.", { status: 400 });
+  }
+
+  switch (event.type) {
+    case "user.created": {
+      const { id, email_addresses, first_name, last_name, image_url } = event.data;
+      const email = email_addresses?.[0]?.email_address;
+      if (!email) break;
+      await upsertUserFromClerk(
+        id,
+        email,
+        [first_name, last_name].filter(Boolean).join(" ") || email,
+        image_url,
+      );
+      break;
+    }
+
+    case "organization.created": {
+      const { id, name, slug } = event.data;
+      await upsertTeamFromClerkOrg(id, name, slug);
+      break;
+    }
+
+    case "organizationMembership.created":
+    case "organizationMembership.updated": {
+      const { organization, public_user_data, role } = event.data;
+      const team = await prisma.team.findUnique({ where: { clerkOrgId: organization.id } });
+      const user = await prisma.user.findUnique({ where: { clerkUserId: public_user_data.user_id } });
+      if (!team || !user) break;
+
+      await upsertMembership(team.id, user.id, mapOrgRole(role));
+      break;
+    }
+
+    case "organizationMembership.deleted": {
+      const { organization, public_user_data } = event.data;
+      const team = await prisma.team.findUnique({ where: { clerkOrgId: organization.id } });
+      const user = await prisma.user.findUnique({ where: { clerkUserId: public_user_data.user_id } });
+      if (!team || !user) break;
+
+      await prisma.teamMembership.updateMany({
+        where: { teamId: team.id, userId: user.id },
+        data: { status: "REMOVED" },
+      });
+      break;
+    }
+  }
+
+  return new Response("ok", { status: 200 });
+}
