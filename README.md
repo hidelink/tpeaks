@@ -44,20 +44,28 @@ prisma/schema.prisma           modelo de datos (incluye tablas de Fase 2/3 ya de
 src/lib/permissions.ts         getCurrentMembership / requireRole — única fuente de verdad de permisos
 src/lib/subscription-gate.ts   gate de suscripción (Fase 2), hoy siempre permite acceso
 src/lib/workout-structure.ts   contrato Zod de la estructura de un entrenamiento
-src/lib/actions/                Server Actions (crear plantilla, asignar al calendario, marcar completado, comentar)
+src/lib/actions/                Server Actions (crear/editar plantilla, asignar/editar/duplicar entrenamiento, marcar completado, comentar)
 src/lib/clerk-sync.ts          upsert de Team/User/TeamMembership desde datos de Clerk (usado por el webhook y como fallback sync-on-read)
-src/components/SegmentEditor.tsx  editor de segmentos compartido entre plantillas y asignación ad hoc
+src/lib/dates.ts               rango de semana + navegación entre semanas (?week=yyyy-MM-dd) del calendario
+src/lib/nav-links.ts           links de navegación por rol, compartidos entre los layouts de coach/atleta y /workout/[id]
+src/components/AppHeader.tsx     header con nav compartido (coach, atleta, y /workout/[id] que vive fuera de ambos árboles)
+src/components/SegmentEditor.tsx  editor de segmentos compartido entre plantillas, asignación ad hoc y edición
+src/components/TemplateForm.tsx   formulario compartido entre crear y editar una plantilla
 src/middleware.ts               Clerk middleware (protege todas las rutas salvo /sign-in, /sign-up, webhooks)
 src/app/coach/                  rutas y layout del coach
 src/app/athlete/                rutas y layout del atleta
-src/app/workout/[id]/           detalle de entrenamiento compartido (render condicional por rol)
+src/app/workout/[id]/           detalle de entrenamiento compartido (render condicional por rol), con su propio layout + edición + duplicar
 src/app/api/webhooks/clerk/     sincroniza User/Team/TeamMembership desde Clerk
 ```
 
 ## Estado actual (MVP Fase 1, en construcción)
 
-Ya funciona (una vez conectada la base de datos y Clerk): auth + creación de equipo vía Clerk Organizations (con onboarding para crear el equipo si el usuario no tiene uno todavía), sincronización de usuarios/equipos por webhook o al vuelo si el webhook no está configurado, dashboard de coach y atleta con las 4 métricas, calendario semanal, creación de plantillas de entrenamiento con editor de segmentos, asignación de entrenamientos (desde plantilla o ad hoc) al calendario de un atleta, detalle de entrenamiento con feedback manual del atleta y comentarios del coach, perfil de atleta con historial.
+Ya funciona (una vez conectada la base de datos y Clerk): auth + creación de equipo vía Clerk Organizations (con onboarding para crear el equipo si el usuario no tiene uno todavía), sincronización de usuarios/equipos por webhook o al vuelo si el webhook no está configurado, dashboard de coach y atleta con las 4 métricas, calendario semanal navegable (anterior/siguiente/hoy), creación y edición de plantillas de entrenamiento con editor de segmentos, asignación de entrenamientos (desde plantilla o ad hoc) al calendario de un atleta, edición de un entrenamiento ya asignado (incluye "moverlo" cambiando la fecha), duplicar/copiar un entrenamiento a otra fecha o a otro atleta, detalle de entrenamiento con feedback manual del atleta y comentarios del coach, perfil de atleta con historial.
 
-Pendiente inmediato (ver Paso 8 del spec, "Should have"): mover/copiar/duplicar entrenamientos por drag-and-drop, editar una plantilla o un entrenamiento ya asignado.
+Pendiente (ver Paso 8 del spec, "Should have"/"Nice to have"): drag-and-drop real en el calendario (mover/duplicar hoy se hacen desde botones explícitos, no arrastrando); vista mensual del calendario (hoy es semanal con navegación); notificaciones in-app de comentarios nuevos; filtros de calendario por atleta/tipo.
 
 No construido todavía (a propósito, ver Paso 2 del spec): cobros reales con Stripe, theming/logo por equipo en runtime, integraciones con relojes/Strava.
+
+## Verificación sin sesión activa
+
+Muchos de estos cambios se validaron con `tsc --noEmit`, `eslint` y `next build` — no con pruebas visuales en el navegador, porque el asistente no tiene forma de iniciar sesión con tu cuenta de Clerk. Antes de darlo por bueno del todo, prueba manualmente: crear/editar una plantilla, asignar/editar/duplicar un entrenamiento, y navegar entre semanas en ambos calendarios (coach y atleta).

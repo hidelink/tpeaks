@@ -450,19 +450,20 @@ Esto es lo que copia `ScheduledWorkout.structure` desde `WorkoutTemplate.structu
 ## Paso 8 — Backlog priorizado
 
 **Must have (Fase 1 — sin esto no hay producto)**
-- Auth + creación de Team + invitación de atletas.
-- CRUD de `WorkoutTemplate` con editor de estructura (segmentos).
-- Asignación de entrenamientos al calendario (crear `ScheduledWorkout`).
-- Vista de calendario para atleta (semana/mes) + detalle de entrenamiento.
-- Marcar completado + formulario de feedback manual.
-- Vista de cumplimiento del coach por atleta + comentarios en entrenamientos.
-- Dashboard con las 4 métricas pedidas (programados, completados, cumplimiento semanal, km semanales).
+- [x] Auth + creación de Team + invitación de atletas.
+- [x] CRUD de `WorkoutTemplate` con editor de estructura (segmentos) — falta eliminar plantillas.
+- [x] Asignación de entrenamientos al calendario (crear `ScheduledWorkout`).
+- [x] Vista de calendario para atleta (semana, navegable) + detalle de entrenamiento — falta vista mensual.
+- [x] Marcar completado + formulario de feedback manual.
+- [x] Vista de cumplimiento del coach por atleta + comentarios en entrenamientos.
+- [x] Dashboard con las 4 métricas pedidas (programados, completados, cumplimiento semanal, km semanales).
 
 **Should have (Fase 1, pero después del loop core)**
-- Editar / mover / copiar / duplicar entrenamientos vía drag-and-drop.
-- Notas del coach al atleta (a nivel entrenamiento y a nivel perfil).
-- Notificaciones in-app (no email todavía) de comentarios nuevos.
-- Filtros de calendario (por tipo de entrenamiento, por atleta).
+- [x] Editar / mover / copiar / duplicar entrenamientos — vía formularios explícitos (editar fecha = mover, botón duplicar/copiar), no drag-and-drop todavía.
+- [x] Notas del coach al atleta (a nivel entrenamiento; falta a nivel perfil de atleta).
+- [ ] Notificaciones in-app (no email todavía) de comentarios nuevos.
+- [ ] Filtros de calendario (por tipo de entrenamiento, por atleta).
+- [ ] Drag-and-drop real en el calendario (mejora sobre los botones explícitos de arriba).
 
 **Nice to have (después de validar Fase 1)**
 - Theming/logo dinámico por equipo (activa lo que ya existe en `Team.logoUrl`/`primaryColor`).

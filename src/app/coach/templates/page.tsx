@@ -53,6 +53,12 @@ export default async function CoachTemplatesPage() {
                     ))}
                   </div>
                 )}
+                <Link
+                  href={`/coach/templates/${t.id}/edit`}
+                  className="mt-3 inline-block text-xs underline"
+                >
+                  Editar
+                </Link>
               </li>
             );
           })}

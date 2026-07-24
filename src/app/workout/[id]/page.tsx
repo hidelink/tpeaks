@@ -7,6 +7,7 @@ import { getCurrentMembership } from "@/lib/permissions";
 import { parseWorkoutStructure } from "@/lib/workout-structure";
 import { CompletionForm } from "./CompletionForm";
 import { CommentForm } from "./CommentForm";
+import { DuplicateWorkoutForm } from "./DuplicateWorkoutForm";
 
 const STATUS_STYLES: Record<string, { label: string; className: string }> = {
   PLANNED: { label: "Programado", className: "bg-blue-50 text-blue-700" },
@@ -40,6 +41,14 @@ export default async function WorkoutDetailPage({
     notFound();
   }
 
+  const athletes =
+    membership.role === "COACH"
+      ? await prisma.teamMembership.findMany({
+          where: { teamId: membership.teamId, role: "ATHLETE", status: "ACTIVE" },
+          include: { user: true },
+        })
+      : [];
+
   const structure = parseWorkoutStructure(workout.structure);
   const status = STATUS_STYLES[workout.status] ?? STATUS_STYLES.PLANNED;
 
@@ -71,12 +80,17 @@ export default async function WorkoutDetailPage({
         </div>
 
         {membership.role === "COACH" && (
-          <Link
-            href={`/coach/schedule/new?date=${format(workout.date, "yyyy-MM-dd")}&athleteId=${workout.athleteMembershipId}`}
-            className="shrink-0 rounded-full bg-black px-4 py-2 text-sm font-medium whitespace-nowrap text-white"
-          >
-            + Asignar otro
-          </Link>
+          <div className="flex shrink-0 flex-col items-end gap-2">
+            <Link
+              href={`/coach/schedule/new?date=${format(workout.date, "yyyy-MM-dd")}&athleteId=${workout.athleteMembershipId}`}
+              className="rounded-full bg-black px-4 py-2 text-sm font-medium whitespace-nowrap text-white"
+            >
+              + Asignar otro
+            </Link>
+            <Link href={`/workout/${workout.id}/edit`} className="text-xs underline">
+              Editar
+            </Link>
+          </div>
         )}
       </div>
 
@@ -167,6 +181,15 @@ export default async function WorkoutDetailPage({
           Este entrenamiento todavía no ha sido completado por el atleta. Cuando lo marque como
           hecho, aquí verás su feedback (duración, distancia, ritmo percibido, RPE y comentario).
         </section>
+      )}
+
+      {membership.role === "COACH" && (
+        <DuplicateWorkoutForm
+          workoutId={workout.id}
+          athletes={athletes.map((a) => ({ id: a.id, name: a.user.name }))}
+          defaultAthleteId={workout.athleteMembershipId}
+          defaultDate={format(workout.date, "yyyy-MM-dd")}
+        />
       )}
 
       <section className="flex flex-col gap-3">
