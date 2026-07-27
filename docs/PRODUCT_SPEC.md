@@ -528,3 +528,10 @@ necesitar reloj/HR (eso es Fase 3). Decisiones:
   2. **Límites de query (encontrado después por una revisión independiente, confirmado empíricamente):** `getCurrentWeekRange`/`getMonthGridRange` construían `start`/`end` en hora LOCAL y esos mismos valores se usaban directo como `gte`/`lte` contra Postgres — el `lte` (fin de semana/mes en hora local) cae en la madrugada del día calendario SIGUIENTE en UTC, y Prisma lo trunca a esa fecha, así que el rango de "esta semana" incluía de más el lunes de la semana siguiente (inflando conteos/métricas si ya había algo programado ahí). Arreglado con `toQueryBoundary()` en `src/lib/calendar-date.ts`, aplicado solo al armar el filtro de Prisma — nunca a los valores usados para `eachDayOfInterval`/`isSameMonth` (esos deben seguir en hora local para que la cuadrícula del calendario se genere bien).
 
   Regla para código nuevo: (a) cualquier valor `date`/`completedAt` que venga de la base de datos y vaya a una función de date-fns no explícitamente UTC debe pasar primero por `toLocalCalendarDate`; (b) cualquier fecha calculada en hora local (`startOfWeek`, `endOfMonth`, etc.) que vaya a un filtro `gte`/`lte` de Prisma contra un campo `@db.Date` debe pasar primero por `toQueryBoundary`. Son funciones inversas para propósitos distintos — no intercambiables.
+
+  Dos bugs de la misma clase, encontrados de forma reactiva (uno por mí corriendo la app,
+  el otro por una revisión independiente) es la señal de que "correr la app y mirar" no
+  alcanza para esta lógica. Se agregó una suite de tests unitarios (Vitest, ver README §Tests)
+  con casos de regresión específicos para ambos — incluye un test que reproduce exactamente
+  el escenario del segundo bug (un entrenamiento fechado justo en lunes, corriendo con
+  `TZ=America/Mexico_City` forzado) para que no pueda volver a colarse en silencio.

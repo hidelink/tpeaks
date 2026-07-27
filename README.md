@@ -40,6 +40,7 @@ Ver el spec completo (producto, arquitectura, esquema de datos, roles, flujos, b
 
 ```
 docs/PRODUCT_SPEC.md          spec de producto + arquitectura + DB + backlog
+vitest.config.ts                config de tests (ver sección "Tests" abajo)
 prisma/schema.prisma           modelo de datos (incluye tablas de Fase 2/3 ya definidas, inactivas)
 src/lib/permissions.ts         getCurrentMembership / requireRole — única fuente de verdad de permisos
 src/lib/subscription-gate.ts   gate de suscripción (Fase 2), hoy siempre permite acceso
@@ -90,6 +91,39 @@ calculaban en hora local, lo que hacía que el rango incluyera de más el primer
 semana/mes siguiente — inflando conteos y métricas si ya había algo programado ahí. También
 arreglado (`toQueryBoundary()` en `src/lib/calendar-date.ts`), confirmado con una query directa
 a la base de datos. Ver `docs/PRODUCT_SPEC.md`, sección de riesgos, para el detalle completo.
+
+## Tests
+
+```bash
+npm test              # corre toda la suite una vez
+npm run test:watch    # modo watch
+npm run test:coverage # con reporte de cobertura
+```
+
+Vitest, sin infraestructura (nada de test DB/Docker) — todo corre mockeando Prisma/Clerk.
+Cubre las funciones puras y la lógica de negocio con más riesgo real de bug silencioso:
+
+- `src/lib/calendar-date.ts`, `src/lib/dates.ts`, `src/lib/calendar-url.ts` — toda la
+  aritmética de fechas/semanas/meses, incluyendo tests de regresión específicos para los
+  dos bugs de timezone que ya mordieron (ver nota arriba).
+- `src/lib/workout-structure.ts` — el contrato Zod completo (válido/inválido) y que los
+  mensajes de error sean legibles en español, no el JSON crudo de ZodError.
+- `src/lib/training-load.ts` — bucketing semanal de carga sRPE + promedio móvil de 4
+  semanas (Prisma mockeado), incluyendo el caso exacto del bug: un entrenamiento fechado
+  justo en lunes no debe contarse en la semana anterior.
+- `src/lib/permissions.ts` — `getCurrentMembership`/`requireRole`/`requireMembership`
+  (Clerk + Prisma mockeados): sin sesión, con membresía, sin membresía, rol equivocado,
+  y que el fallback de sync-on-read se dispare solo cuando hace falta.
+- `src/lib/subscription-gate.ts` — cada `SubscriptionStatus` da el acceso correcto (hoy
+  inerte en Fase 1, pero es el gate real de Fase 2).
+- `src/lib/clerk-sync.ts` — solo `mapOrgRole` (la única decisión real ahí); los upserts
+  de Prisma no se testean a este nivel, tienen más sentido como test de integración.
+
+**Lo que NO está cubierto todavía, a propósito:** los Server Actions en `src/lib/actions/*`
+(requerirían mockear Clerk+Prisma por cada uno, con retorno de valor bajo respecto a un test
+de integración real contra una base de datos de prueba) y componentes de React. Si el
+proyecto crece, el siguiente escalón natural es un puñado de tests de integración contra una
+base de datos de prueba real (Testcontainers o un Supabase de test), no más mocks.
 
 ## Datos de prueba
 
