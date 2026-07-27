@@ -413,9 +413,9 @@ Esto es lo que copia `ScheduledWorkout.structure` desde `WorkoutTemplate.structu
 3. Guarda como `WorkoutTemplate` (reutilizable) o lo dirige directo al calendario de un atleta (`ScheduledWorkout` ad hoc, `templateId = null`).
 
 **Asignación al calendario**
-1. Desde la vista semanal/mensual, coach arrastra una plantilla a un día y un atleta (o selecciona atleta(s) y fecha desde un modal).
-2. Se crea `ScheduledWorkout` con `structure` copiado de la plantilla en ese instante.
-3. Coach puede mover (drag a otro día), copiar (a otro atleta) o duplicar (mismo atleta, otra semana) desde el mismo calendario.
+1. Desde el calendario, coach elige "Asignar entrenamiento" (o "+ Agregar" en un día) y selecciona uno o **varios atletas** (checklist con "seleccionar todos"), fecha, y plantilla o estructura ad hoc.
+2. Se crea un `ScheduledWorkout` independiente por cada atleta seleccionado, todos con el mismo `structure` copiado en ese instante — cada quien completa/comenta el suyo por separado.
+3. Coach puede mover (editar la fecha), copiar (a otro atleta) o duplicar (mismo atleta, otra fecha) desde la página de detalle de cada entrenamiento — no es drag-and-drop todavía.
 
 **Visualización del atleta**
 1. Atleta entra → gate de suscripción del equipo (`assertTeamHasAccess`) → si pasa, ve su calendario semanal con estados visuales (planeado / completado / perdido).

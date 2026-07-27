@@ -6,16 +6,20 @@ import { requireRole, ForbiddenError } from "@/lib/permissions";
 import { parseWorkoutStructureInput, type WorkoutStructure } from "@/lib/workout-structure";
 
 /**
- * Asigna un entrenamiento (desde plantilla o ad hoc) al calendario de un
- * atleta. Si viene de una plantilla, structure se copia como snapshot en
- * ese instante — editar la plantilla después no debe alterar lo ya
- * programado (ver docs/PRODUCT_SPEC.md, Paso 4).
+ * Asigna un entrenamiento (desde plantilla o ad hoc) al calendario de uno o
+ * varios atletas a la vez — el caso de uso real de un coach con equipo:
+ * "esta serie del martes, para todo mi grupo de fondo". Si viene de una
+ * plantilla, structure se copia como snapshot en ese instante — editar la
+ * plantilla después no debe alterar lo ya programado (ver
+ * docs/PRODUCT_SPEC.md, Paso 4). Un solo WorkoutTemplate/structure, un
+ * ScheduledWorkout independiente por atleta (cada quien completa/comenta el
+ * suyo por separado).
  *
- * Retorna el id creado en vez de hacer redirect() aquí — ver el comentario
- * equivalente en src/lib/actions/templates.ts.
+ * Retorna los ids creados en vez de hacer redirect() aquí — ver el
+ * comentario equivalente en src/lib/actions/templates.ts.
  */
-export async function scheduleWorkout(input: {
-  athleteMembershipId: string;
+export async function scheduleWorkoutToMany(input: {
+  athleteMembershipIds: string[];
   date: string; // "yyyy-MM-dd"
   title: string;
   coachNote?: string;
@@ -24,10 +28,16 @@ export async function scheduleWorkout(input: {
 }) {
   const membership = await requireRole("COACH");
 
-  const athlete = await prisma.teamMembership.findFirst({
-    where: { id: input.athleteMembershipId, teamId: membership.teamId, role: "ATHLETE" },
+  if (input.athleteMembershipIds.length === 0) {
+    throw new ForbiddenError("Selecciona al menos un atleta.");
+  }
+
+  const athletes = await prisma.teamMembership.findMany({
+    where: { id: { in: input.athleteMembershipIds }, teamId: membership.teamId, role: "ATHLETE" },
   });
-  if (!athlete) throw new ForbiddenError("Ese atleta no es de tu equipo.");
+  if (athletes.length !== input.athleteMembershipIds.length) {
+    throw new ForbiddenError("Alguno de esos atletas no es de tu equipo.");
+  }
 
   let structure: WorkoutStructure;
   if (input.templateId) {
@@ -40,22 +50,28 @@ export async function scheduleWorkout(input: {
     structure = parseWorkoutStructureInput(input.structure);
   }
 
-  const workout = await prisma.scheduledWorkout.create({
-    data: {
-      teamId: membership.teamId,
-      athleteMembershipId: athlete.id,
-      coachMembershipId: membership.id,
-      templateId: input.templateId,
-      date: new Date(input.date),
-      title: input.title,
-      structure,
-      coachNote: input.coachNote || undefined,
-    },
-  });
+  const date = new Date(input.date);
+
+  const created = await prisma.$transaction(
+    athletes.map((athlete) =>
+      prisma.scheduledWorkout.create({
+        data: {
+          teamId: membership.teamId,
+          athleteMembershipId: athlete.id,
+          coachMembershipId: membership.id,
+          templateId: input.templateId,
+          date,
+          title: input.title,
+          structure,
+          coachNote: input.coachNote || undefined,
+        },
+      }),
+    ),
+  );
 
   revalidatePath("/coach/calendar");
   revalidatePath("/athlete/calendar");
-  return { id: workout.id };
+  return { ids: created.map((w) => w.id), date: input.date };
 }
 
 /**

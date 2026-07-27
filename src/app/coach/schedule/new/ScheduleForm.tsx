@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { SegmentEditor } from "@/components/SegmentEditor";
-import { scheduleWorkout } from "@/lib/actions/schedule";
+import { scheduleWorkoutToMany } from "@/lib/actions/schedule";
 import type { WorkoutSegment } from "@/lib/workout-structure";
 
 export function ScheduleForm({
@@ -21,8 +21,8 @@ export function ScheduleForm({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const [athleteMembershipId, setAthleteMembershipId] = useState(
-    defaultAthleteId ?? athletes[0]?.id ?? "",
+  const [athleteMembershipIds, setAthleteMembershipIds] = useState<string[]>(
+    defaultAthleteId ? [defaultAthleteId] : [],
   );
   const [date, setDate] = useState(defaultDate);
   const [templateId, setTemplateId] = useState<string>("");
@@ -30,20 +30,30 @@ export function ScheduleForm({
   const [coachNote, setCoachNote] = useState("");
   const [segments, setSegments] = useState<WorkoutSegment[]>([{ label: "", repeat: 1 }]);
 
+  function toggleAthlete(id: string) {
+    setAthleteMembershipIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  }
+
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     startTransition(async () => {
       try {
-        const result = await scheduleWorkout({
-          athleteMembershipId,
+        const result = await scheduleWorkoutToMany({
+          athleteMembershipIds,
           date,
           title: title || templates.find((t) => t.id === templateId)?.title || "Entrenamiento",
           coachNote: coachNote || undefined,
           templateId: templateId || undefined,
           structure: templateId ? undefined : { segments },
         });
-        router.push(`/workout/${result.id}`);
+        if (result.ids.length === 1) {
+          router.push(`/workout/${result.ids[0]}`);
+        } else {
+          router.push(`/coach/calendar?date=${result.date}`);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Algo salió mal.");
       }
@@ -52,33 +62,50 @@ export function ScheduleForm({
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-4">
-        <label className="flex flex-col gap-1 text-sm">
-          Atleta
-          <select
-            value={athleteMembershipId}
-            onChange={(e) => setAthleteMembershipId(e.target.value)}
-            className="rounded-md border border-zinc-300 px-3 py-2"
-          >
-            {athletes.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm">
-          Fecha
-          <input
-            type="date"
-            required
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="rounded-md border border-zinc-300 px-3 py-2"
-          />
-        </label>
+      <div>
+        <div className="mb-1 flex items-center justify-between">
+          <label className="text-sm font-medium">Atletas</label>
+          <div className="flex gap-3 text-xs">
+            <button
+              type="button"
+              onClick={() => setAthleteMembershipIds(athletes.map((a) => a.id))}
+              className="underline"
+            >
+              Seleccionar todos
+            </button>
+            <button
+              type="button"
+              onClick={() => setAthleteMembershipIds([])}
+              className="underline"
+            >
+              Ninguno
+            </button>
+          </div>
+        </div>
+        <div className="flex max-h-48 flex-col gap-1 overflow-y-auto rounded-md border border-zinc-300 p-2">
+          {athletes.map((a) => (
+            <label key={a.id} className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-zinc-50">
+              <input
+                type="checkbox"
+                checked={athleteMembershipIds.includes(a.id)}
+                onChange={() => toggleAthlete(a.id)}
+              />
+              {a.name}
+            </label>
+          ))}
+        </div>
       </div>
+
+      <label className="flex flex-col gap-1 text-sm">
+        Fecha
+        <input
+          type="date"
+          required
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className="rounded-md border border-zinc-300 px-3 py-2"
+        />
+      </label>
 
       <label className="flex flex-col gap-1 text-sm">
         Plantilla (opcional — déjalo en blanco para crear uno nuevo)
@@ -132,10 +159,14 @@ export function ScheduleForm({
 
       <button
         type="submit"
-        disabled={isPending || !athleteMembershipId}
+        disabled={isPending || athleteMembershipIds.length === 0}
         className="self-start rounded-full bg-black px-6 py-2 text-sm font-medium text-white disabled:opacity-50"
       >
-        {isPending ? "Guardando..." : "Asignar al calendario"}
+        {isPending
+          ? "Guardando..."
+          : athleteMembershipIds.length === 0
+            ? "Selecciona al menos un atleta"
+            : `Asignar a ${athleteMembershipIds.length} atleta${athleteMembershipIds.length === 1 ? "" : "s"}`}
       </button>
     </form>
   );
