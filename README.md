@@ -1,5 +1,7 @@
 # TPeaks
 
+![CI](https://github.com/hidelink/tpeaks/actions/workflows/ci.yml/badge.svg)
+
 Plataforma de entrenamiento para coaches y corredores — "TrainingPeaks simplificado", white-label por equipo.
 
 Ver el spec completo (producto, arquitectura, esquema de datos, roles, flujos, backlog) en [`docs/PRODUCT_SPEC.md`](./docs/PRODUCT_SPEC.md) antes de tocar código — ahí está el razonamiento detrás de cada decisión.
@@ -124,6 +126,15 @@ Cubre las funciones puras y la lógica de negocio con más riesgo real de bug si
 de integración real contra una base de datos de prueba) y componentes de React. Si el
 proyecto crece, el siguiente escalón natural es un puñado de tests de integración contra una
 base de datos de prueba real (Testcontainers o un Supabase de test), no más mocks.
+
+## CI
+
+`.github/workflows/ci.yml` corre en cada push a `main` y en cada pull request:
+`npm ci` → `prisma generate` → lint → type check → tests → build. No depende de
+ningún secreto real (Prisma Client se genera desde el schema sin conectar a nada, y
+los tests mockean Clerk/Prisma) — si algo se rompe, se ve en rojo en la pestaña
+**Actions** de GitHub, sin depender de que alguien se acuerde de correr los checks a mano
+antes de hacer push.
 
 ## Datos de prueba
 
