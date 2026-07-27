@@ -82,8 +82,14 @@ funciones de date-fns en hora local (`format`, `isSameDay`, `startOfWeek`) la mo
 (America/Mexico_City). Ya está arreglado (`src/lib/calendar-date.ts`,
 `toLocalCalendarDate`/`todayAsUtcMidnight`, aplicado en cada punto donde se leía esa fecha),
 pero si notaste antes que un entrenamiento aparecía en el día equivocado en el calendario, en
-el detalle, o al editarlo — era este bug. Vale la pena que confirmes ahora que las fechas se
-ven correctas en tu propia sesión.
+el detalle, o al editarlo — era este bug.
+
+Una revisión independiente encontró una segunda instancia del mismo problema: los límites de
+la query de "esta semana"/"este mes" (`getCurrentWeekRange`/`getMonthGridRange`) también se
+calculaban en hora local, lo que hacía que el rango incluyera de más el primer día de la
+semana/mes siguiente — inflando conteos y métricas si ya había algo programado ahí. También
+arreglado (`toQueryBoundary()` en `src/lib/calendar-date.ts`), confirmado con una query directa
+a la base de datos. Ver `docs/PRODUCT_SPEC.md`, sección de riesgos, para el detalle completo.
 
 ## Datos de prueba
 

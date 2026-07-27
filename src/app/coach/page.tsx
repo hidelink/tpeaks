@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getCurrentMembership } from "@/lib/permissions";
 import { getCurrentWeekRange } from "@/lib/dates";
+import { toQueryBoundary } from "@/lib/calendar-date";
 
 export default async function CoachDashboardPage() {
   const membership = await getCurrentMembership();
@@ -11,7 +12,7 @@ export default async function CoachDashboardPage() {
 
   const [scheduledThisWeek, athletes] = await Promise.all([
     prisma.scheduledWorkout.findMany({
-      where: { teamId, date: { gte: start, lte: end } },
+      where: { teamId, date: { gte: toQueryBoundary(start), lte: toQueryBoundary(end) } },
       include: { completion: true, athlete: { include: { user: true } } },
     }),
     prisma.teamMembership.findMany({

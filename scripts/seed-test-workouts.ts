@@ -2,6 +2,7 @@ import "dotenv/config";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { startOfWeek, addDays, subWeeks } from "date-fns";
+import { toQueryBoundary } from "../src/lib/calendar-date";
 
 /**
  * Siembra ~4 semanas de entrenamientos de prueba (con feedback ya
@@ -86,8 +87,12 @@ async function main() {
 
   for (const w of WORKOUTS) {
     const weekStart = startOfWeek(subWeeks(today, w.weeksAgo), { weekStartsOn: 1 });
-    const date = addDays(weekStart, w.weekday - 1);
-    const isPast = date <= today;
+    const localDate = addDays(weekStart, w.weekday - 1);
+    const isPast = localDate <= today;
+    // ScheduledWorkout.date es @db.Date, guardado como medianoche UTC — nunca
+    // escribir un Date calculado en hora local directamente (ver
+    // docs/PRODUCT_SPEC.md, riesgo de timezone).
+    const date = toQueryBoundary(localDate);
 
     const durationSeconds = w.durationMin * 60;
     const distanceMeters = Math.round(w.distanceKm * 1000);

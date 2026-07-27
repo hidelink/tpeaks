@@ -28,6 +28,20 @@ export function toLocalCalendarDate(dbDate: Date): Date {
  * medianoche UTC real, excluyendo por error los entrenamientos de hoy.
  */
 export function todayAsUtcMidnight(): Date {
-  const now = new Date();
-  return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  return toQueryBoundary(new Date());
+}
+
+/**
+ * Convierte cualquier Date calculado en hora LOCAL (ej. startOfWeek/endOfWeek/
+ * startOfMonth de date-fns) a medianoche UTC de ese mismo día calendario —
+ * la forma correcta de construir límites `gte`/`lte` para comparar contra
+ * ScheduledWorkout.date. Sin esto, un `endOfWeek` local (23:59:59.999 local)
+ * cae en la madrugada del día calendario SIGUIENTE en UTC en cualquier
+ * timezone detrás de UTC, y Prisma lo trunca a esa fecha — el rango de
+ * "esta semana" termina incluyendo el lunes de la semana que sigue.
+ * Confirmado empíricamente: sin esto, una semana con un entrenamiento ya
+ * programado para el lunes siguiente lo cuenta de más en las métricas.
+ */
+export function toQueryBoundary(localDate: Date): Date {
+  return new Date(Date.UTC(localDate.getFullYear(), localDate.getMonth(), localDate.getDate()));
 }

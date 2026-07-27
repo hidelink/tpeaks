@@ -4,7 +4,7 @@ import { es } from "date-fns/locale";
 import { prisma } from "@/lib/prisma";
 import { getCurrentMembership } from "@/lib/permissions";
 import { getCurrentWeekRange } from "@/lib/dates";
-import { toLocalCalendarDate, todayAsUtcMidnight } from "@/lib/calendar-date";
+import { toLocalCalendarDate, todayAsUtcMidnight, toQueryBoundary } from "@/lib/calendar-date";
 import { assertAthleteTeamAccess } from "@/lib/subscription-gate";
 import { getWeeklyLoadSeries } from "@/lib/training-load";
 import { TrainingLoadChart } from "@/components/TrainingLoadChart";
@@ -18,7 +18,10 @@ export default async function AthleteDashboardPage() {
 
   const [weekWorkouts, nextWorkout, loadSeries] = await Promise.all([
     prisma.scheduledWorkout.findMany({
-      where: { athleteMembershipId: membership.id, date: { gte: start, lte: end } },
+      where: {
+        athleteMembershipId: membership.id,
+        date: { gte: toQueryBoundary(start), lte: toQueryBoundary(end) },
+      },
       include: { completion: true },
     }),
     prisma.scheduledWorkout.findFirst({

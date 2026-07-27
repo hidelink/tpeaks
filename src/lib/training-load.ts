@@ -1,6 +1,6 @@
 import { startOfWeek, subWeeks } from "date-fns";
 import { prisma } from "@/lib/prisma";
-import { toLocalCalendarDate } from "@/lib/calendar-date";
+import { toLocalCalendarDate, toQueryBoundary } from "@/lib/calendar-date";
 
 /**
  * Carga de entrenamiento por sRPE (session RPE): RPE (1-10) × duración en
@@ -34,7 +34,7 @@ export async function getWeeklyLoadSeries(
 
   const completions = await prisma.workoutCompletion.findMany({
     where: {
-      scheduledWorkout: { athleteMembershipId, date: { gte: earliestWeekStart } },
+      scheduledWorkout: { athleteMembershipId, date: { gte: toQueryBoundary(earliestWeekStart) } },
       rpe: { not: null },
       durationMinutes: { not: null },
     },

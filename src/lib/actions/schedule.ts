@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole, ForbiddenError } from "@/lib/permissions";
-import { parseWorkoutStructureInput, type WorkoutStructure } from "@/lib/workout-structure";
+import { parseWorkoutStructure, parseWorkoutStructureInput, type WorkoutStructure } from "@/lib/workout-structure";
 
 /**
  * Asigna un entrenamiento (desde plantilla o ad hoc) al calendario de uno o
@@ -143,7 +143,7 @@ export async function duplicateScheduledWorkout(
       templateId: source.templateId,
       date: new Date(input.date),
       title: source.title,
-      structure: source.structure as WorkoutStructure,
+      structure: parseWorkoutStructure(source.structure),
       coachNote: source.coachNote,
     },
   });

@@ -11,7 +11,7 @@ import {
   adjacentMonthParams,
 } from "@/lib/dates";
 import { buildCalendarHref, type CalendarView } from "@/lib/calendar-url";
-import { toLocalCalendarDate } from "@/lib/calendar-date";
+import { toLocalCalendarDate, toQueryBoundary } from "@/lib/calendar-date";
 import { CalendarFilterBar } from "@/components/CalendarFilterBar";
 
 /**
@@ -51,7 +51,7 @@ export default async function CoachCalendarPage({
     prisma.scheduledWorkout.findMany({
       where: {
         teamId: membership.teamId,
-        date: { gte: range.start, lte: range.end },
+        date: { gte: toQueryBoundary(range.start), lte: toQueryBoundary(range.end) },
         athleteMembershipId: athleteId || undefined,
         title: q ? { contains: q, mode: "insensitive" } : undefined,
       },
