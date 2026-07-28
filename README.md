@@ -166,6 +166,15 @@ npx tsx scripts/seed-marathon-training.ts [email-del-atleta]
 # default: member@yopmail.com
 ```
 
+`scripts/seed-templates.ts` siembra 4 plantillas de entrenamiento reutilizables con
+variedad real (series en pista, tempo, fondo largo progresivo, fartlek) — para que
+`/coach/templates` se vea como se usaría de verdad en vez de vacío.
+
+```bash
+npx tsx scripts/seed-templates.ts [email-del-coach]
+# sin argumento, asume que solo hay un coach y lo usa
+```
+
 ```bash
 npx tsx scripts/seed-test-workouts.ts [email-del-atleta]
 # default: member@yopmail.com
