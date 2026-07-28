@@ -66,6 +66,8 @@ src/lib/actions/invite.ts       invitar/revocar atleta vía la API de invitacion
 src/lib/actions/athlete-profile.ts  nota privada del coach + resultado de carrera/VDOT de un atleta
 src/lib/coach-dashboard.ts     cálculos puros del dashboard: cumplimiento sobre lo vencido, inactividad, carga semana vs. anterior
 src/lib/groups.ts              resolver grupos a socios sin duplicar a quien está en varios
+src/lib/attendance.ts          pase de lista: validar la hora local, resumir y calcular % de asistencia
+src/lib/actions/sessions.ts    sesiones presenciales del club + pase de lista (MANAGE_TRAINING)
 src/lib/actions/groups.ts      CRUD de grupos de entrenamiento del club (MANAGE_MEMBERS)
 src/lib/sports.ts              tipos de sesión (correr, trail, bici, natación, fuerza, movilidad) y qué campos aplica cada uno
 src/components/SportSelect.tsx  selector de tipo, compartido por plantillas, asignación y edición
@@ -157,6 +159,26 @@ deduplica; hay un test que lo fija).
 
 Borrar un grupo no borra socios ni entrenamientos: la pertenencia es `ON DELETE CASCADE` y lo ya
 asignado no depende del grupo — el grupo era el atajo para asignar, no el dueño de nada.
+
+### Sesiones presenciales y pase de lista
+
+`ClubSession` es el entrenamiento presencial del club — día, hora, lugar, grupo y coach — y es
+distinto de `ScheduledWorkout`, que es el plan individual de un socio y puede hacerse solo. Vive en
+`/coach/sessions`; el detalle tiene el pase de lista.
+
+**La hora es un string `"HH:mm"` en hora local del club, no un timestamp.** "Los martes a las 7:00
+en el parque" es un hecho en la hora local; convertirlo a UTC solo reintroduce la clase de bug que
+ya costó dos arreglos aquí. Como la base no valida el formato, lo hace `parseStartTime`, que además
+normaliza `7:00` a `07:00` para que ordenar por texto ordene por hora.
+
+**No tener marca no es faltar.** Solo existe fila de asistencia para quien ya fue marcado; la
+ausencia de fila significa "todavía no se pasó lista". Si contáramos eso como falta, el historial
+de un socio se llenaría de ausencias inventadas por sesiones que el coach nunca registró. Por lo
+mismo, el porcentaje de asistencia se calcula sobre lo registrado y no sobre los convocados, y
+muestra "—" cuando no hay nada — mismo criterio que el cumplimiento del dashboard.
+
+El pase de lista marca de una persona a la vez y es optimista en el cliente: se usa de pie en el
+parque, con mala red, mientras la gente llega.
 
 ### Scripts que borran datos
 

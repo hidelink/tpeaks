@@ -56,6 +56,13 @@ enum WorkoutSport {
   OTHER
 }
 
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  /// Avisó que no venía. Un club chico lo distingue de faltar sin avisar.
+  EXCUSED
+}
+
 enum SubscriptionStatus {
   TRIALING
   ACTIVE
@@ -95,6 +102,7 @@ model Team {
   templates    WorkoutTemplate[]
   scheduled    ScheduledWorkout[]
   groups       TrainingGroup[]
+  sessions     ClubSession[]
   subscription Subscription?
 }
 
@@ -127,6 +135,8 @@ model TeamMembership {
 
   athleteProfile     AthleteProfile?
   groups             TrainingGroupMember[]
+  attendance         SessionAttendance[]
+  sessionsAsCoach    ClubSession[]         @relation("SessionCoach")
   scheduledAsAthlete ScheduledWorkout[]    @relation("AthleteSchedules")
   scheduledAsCoach   ScheduledWorkout[]    @relation("CoachSchedules")
   coachComments      CoachComment[]
@@ -166,8 +176,9 @@ model TrainingGroup {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  team    Team                  @relation(fields: [teamId], references: [id])
-  members TrainingGroupMember[]
+  team     Team                  @relation(fields: [teamId], references: [id])
+  members  TrainingGroupMember[]
+  sessions ClubSession[]
 
   /// Dos grupos con el mismo nombre en el mismo club serían indistinguibles
   /// en el selector de asignación.
@@ -186,6 +197,53 @@ model TrainingGroupMember {
   membership TeamMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
 
   @@unique([groupId, membershipId])
+  @@index([membershipId])
+}
+
+/// Entrenamiento presencial del club: día, hora, lugar y quién lo da. Es la
+/// vida diaria de un club y lo que justifica la mensualidad — distinto de
+/// ScheduledWorkout, que es el plan individual de un socio y puede hacerse solo.
+model ClubSession {
+  id                String   @id @default(cuid())
+  teamId            String
+  /// Null = abierta a todo el club.
+  groupId           String?
+  coachMembershipId String?
+  title             String
+  /// Solo fecha, igual que ScheduledWorkout: ver el porqué en calendar-date.ts.
+  date              DateTime @db.Date
+  /// Hora local del club como "HH:mm". A propósito NO es un timestamp: "los
+  /// martes a las 7:00 en el parque" es un hecho en la hora local del club, y
+  /// convertirlo a UTC solo reintroduce la clase de bug que ya costó dos
+  /// arreglos en este proyecto.
+  startTime         String
+  location          String?
+  note              String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  team       Team                @relation(fields: [teamId], references: [id])
+  group      TrainingGroup?      @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  coach      TeamMembership?     @relation("SessionCoach", fields: [coachMembershipId], references: [id], onDelete: SetNull)
+  attendance SessionAttendance[]
+
+  @@index([teamId, date])
+}
+
+/// Pase de lista. Solo existe fila para quien ya fue marcado: la ausencia de
+/// fila significa "todavía no se pasó lista", que no es lo mismo que faltar.
+model SessionAttendance {
+  id           String           @id @default(cuid())
+  sessionId    String
+  membershipId String
+  status       AttendanceStatus
+  note         String?
+  markedAt     DateTime         @default(now())
+
+  session    ClubSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  membership TeamMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, membershipId])
   @@index([membershipId])
 }
 

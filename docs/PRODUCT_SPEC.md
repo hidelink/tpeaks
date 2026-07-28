@@ -560,8 +560,28 @@ la asistencia se toma sobre un grupo).
 - **Borrar un grupo no borra nada más.** La pertenencia es `ON DELETE CASCADE` y lo ya asignado no
   depende del grupo: era el atajo para asignar, no el dueño de nada.
 
-Lo que sigue en la Fase 1: sesiones grupales con lugar y horario, asistencia, estado de membresía
-(sembrado, sin cobrar) y página pública para unirse. Ahí el perfil del socio probablemente se
+### Fase 1 — Sesiones presenciales y asistencia
+
+Es la vida diaria de un club y lo que justifica la mensualidad. `ClubSession` (día, hora, lugar,
+grupo, coach) es deliberadamente distinta de `ScheduledWorkout`: una es la junta física del club, la
+otra el plan individual de un socio, que puede hacer solo.
+
+- **La hora es `"HH:mm"` en hora local del club, no un timestamp.** "Los martes a las 7:00 en el
+  parque" es un hecho local; pasarlo a UTC reintroduce la clase de bug que ya costó dos arreglos en
+  este proyecto. La base no puede validar el formato, así que `parseStartTime` es la única puerta y
+  normaliza `7:00` a `07:00` para que el orden alfabético sea el cronológico.
+- **No tener marca no es faltar.** Solo hay fila para quien ya fue marcado. Contar la ausencia de
+  fila como falta llenaría el historial de cada socio de ausencias inventadas por sesiones que
+  nadie registró. Es el mismo error de "período parcial contra completo" que ya apareció tres veces
+  aquí, en otra forma: confundir "no medido" con "medido y malo".
+- **El porcentaje se calcula sobre lo registrado, no sobre los convocados**, y muestra "—" cuando
+  no hay nada — igual que el cumplimiento semanal.
+- **Se marca de una persona a la vez, y optimista.** Se usa de pie en el parque con mala red,
+  mientras la gente va llegando; guardar la lista completa de golpe obligaría a decidir por
+  adelantado sobre quien todavía no llega.
+
+Lo que sigue en la Fase 1: estado de membresía (sembrado, sin cobrar) y página pública para
+unirse. Ahí el perfil del socio probablemente se
 divida en dos: la parte administrativa (`MANAGE_MEMBERS`, con estado de pago) y la deportiva
 (`MANAGE_TRAINING`).
 

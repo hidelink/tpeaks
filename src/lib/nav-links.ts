@@ -17,6 +17,7 @@ export type NavLink = {
 export const STAFF_NAV_LINKS: NavLink[] = [
   { href: "/coach", label: "Dashboard" },
   { href: "/coach/calendar", label: "Calendario" },
+  { href: "/coach/sessions", label: "Sesiones", requires: "MANAGE_TRAINING" },
   { href: "/coach/templates", label: "Plantillas", requires: "MANAGE_TRAINING" },
   { href: "/coach/athletes", label: "Socios", requires: "MANAGE_MEMBERS" },
   { href: "/coach/groups", label: "Grupos", requires: "MANAGE_MEMBERS" },
