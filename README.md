@@ -65,6 +65,8 @@ src/middleware.ts               Clerk middleware (protege todas las rutas salvo 
 src/lib/actions/invite.ts       invitar/revocar atleta vía la API de invitaciones de Clerk Organizations
 src/lib/actions/athlete-profile.ts  nota privada del coach + resultado de carrera/VDOT de un atleta
 src/lib/coach-dashboard.ts     cálculos puros del dashboard: cumplimiento sobre lo vencido, inactividad, carga semana vs. anterior
+src/lib/groups.ts              resolver grupos a socios sin duplicar a quien está en varios
+src/lib/actions/groups.ts      CRUD de grupos de entrenamiento del club (MANAGE_MEMBERS)
 src/lib/sports.ts              tipos de sesión (correr, trail, bici, natación, fuerza, movilidad) y qué campos aplica cada uno
 src/components/SportSelect.tsx  selector de tipo, compartido por plantillas, asignación y edición
 src/lib/vdot.ts                cálculo de ritmos de entrenamiento (modelo VDOT de Daniels) — solo asfalto/pista, ver nota abajo
@@ -141,6 +143,20 @@ npx tsx scripts/set-role.ts email@ejemplo.com COACH
 ```
 
 Sin argumentos lista los roles actuales. Los roles se ven en **Socios y staff**.
+
+### Grupos de entrenamiento
+
+Un club agrupa socios por nivel o por día ("Avanzados", "Trail", "Principiantes") en
+`/coach/groups`. **Un socio puede estar en varios grupos a la vez**, por eso es tabla de unión
+(`TrainingGroupMember`) y no un campo en la membresía.
+
+El punto no es la pantalla, es la asignación: al asignar un entrenamiento aparecen los grupos como
+chips que agregan o quitan a sus socios de la misma lista de selección. Se combinan con personas
+sueltas, y quien está en dos grupos **no recibe el entrenamiento dos veces** (`memberIdsOfGroups`
+deduplica; hay un test que lo fija).
+
+Borrar un grupo no borra socios ni entrenamientos: la pertenencia es `ON DELETE CASCADE` y lo ya
+asignado no depende del grupo — el grupo era el atajo para asignar, no el dueño de nada.
 
 ### Scripts que borran datos
 

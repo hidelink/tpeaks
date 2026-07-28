@@ -11,7 +11,7 @@ export default async function NewScheduledWorkoutPage({
   const { date, athleteId } = await searchParams;
   const membership = await requirePageCapability("MANAGE_TRAINING");
 
-  const [athletes, templates] = await Promise.all([
+  const [athletes, templates, groups] = await Promise.all([
     prisma.teamMembership.findMany({
       where: { teamId: membership.teamId, role: "ATHLETE", status: "ACTIVE" },
       include: { user: true, athleteProfile: true },
@@ -20,6 +20,11 @@ export default async function NewScheduledWorkoutPage({
     prisma.workoutTemplate.findMany({
       where: { teamId: membership.teamId },
       orderBy: { createdAt: "desc" },
+    }),
+    prisma.trainingGroup.findMany({
+      where: { teamId: membership.teamId },
+      include: { members: { select: { membershipId: true } } },
+      orderBy: { name: "asc" },
     }),
   ]);
 
@@ -38,6 +43,11 @@ export default async function NewScheduledWorkoutPage({
             vdot: a.athleteProfile?.vdot ?? null,
           }))}
           templates={templates.map((t) => ({ id: t.id, title: t.title, sport: t.sport }))}
+          groups={groups.map((g) => ({
+            id: g.id,
+            name: g.name,
+            memberIds: g.members.map((m) => m.membershipId),
+          }))}
           defaultDate={date ?? format(new Date(), "yyyy-MM-dd")}
           defaultAthleteId={athleteId}
         />

@@ -94,6 +94,7 @@ model Team {
   memberships  TeamMembership[]
   templates    WorkoutTemplate[]
   scheduled    ScheduledWorkout[]
+  groups       TrainingGroup[]
   subscription Subscription?
 }
 
@@ -125,8 +126,9 @@ model TeamMembership {
   user User @relation(fields: [userId], references: [id])
 
   athleteProfile     AthleteProfile?
-  scheduledAsAthlete ScheduledWorkout[] @relation("AthleteSchedules")
-  scheduledAsCoach   ScheduledWorkout[] @relation("CoachSchedules")
+  groups             TrainingGroupMember[]
+  scheduledAsAthlete ScheduledWorkout[]    @relation("AthleteSchedules")
+  scheduledAsCoach   ScheduledWorkout[]    @relation("CoachSchedules")
   coachComments      CoachComment[]
   integrations       Integration[]
 
@@ -151,6 +153,40 @@ model AthleteProfile {
   createdAt DateTime @default(now())
 
   membership TeamMembership @relation(fields: [membershipId], references: [id])
+}
+
+/// Grupo de entrenamiento dentro de un club: "avanzados", "principiantes",
+/// "grupo de trail". Un club chico puede no usarlos; uno de 40 socios los
+/// necesita para no asignar de uno en uno.
+model TrainingGroup {
+  id          String   @id @default(cuid())
+  teamId      String
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  team    Team                  @relation(fields: [teamId], references: [id])
+  members TrainingGroupMember[]
+
+  /// Dos grupos con el mismo nombre en el mismo club serían indistinguibles
+  /// en el selector de asignación.
+  @@unique([teamId, name])
+}
+
+/// Un socio puede estar en varios grupos a la vez (ej. "avanzados" y "trail"),
+/// por eso es tabla de unión y no un campo en TeamMembership.
+model TrainingGroupMember {
+  id           String   @id @default(cuid())
+  groupId      String
+  membershipId String
+  createdAt    DateTime @default(now())
+
+  group      TrainingGroup  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  membership TeamMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, membershipId])
+  @@index([membershipId])
 }
 
 model WorkoutTemplate {

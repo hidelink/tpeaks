@@ -542,10 +542,28 @@ entrenamiento" del calendario, las herramientas de prescripción dentro del perf
 también se condicionan por capacidad — es donde más fácil se cuela el problema, porque la página
 sí le corresponde al rol y solo un botón no.
 
-Lo que sigue (Fase 1) es lo que convierte esto en un club: grupos por nivel, sesiones grupales con
-lugar y horario, asistencia, estado de membresía (sembrado, sin cobrar) y página pública para
-unirse. Ahí el perfil del socio probablemente se divida en dos: la parte administrativa
-(`MANAGE_MEMBERS`, con estado de pago) y la deportiva (`MANAGE_TRAINING`).
+### Fase 1 — Grupos de entrenamiento
+
+Primera pieza de la Fase 1, y la que desbloquea las siguientes (una sesión grupal es de un grupo;
+la asistencia se toma sobre un grupo).
+
+- **Un socio puede estar en varios grupos** ("avanzados" y "trail" a la vez), así que es tabla de
+  unión y no un campo en la membresía. La consecuencia que importa: al asignar a los dos grupos, esa
+  persona no debe recibir el entrenamiento dos veces — `memberIdsOfGroups` deduplica y hay un test
+  que fija ese caso.
+- **Los grupos son gestión de socios (`MANAGE_MEMBERS`), no de entrenamiento.** Un Admin los
+  administra aunque no prescriba; un Coach también, porque agrupa a sus propios atletas.
+- **En la asignación son chips, no una selección aparte.** Agregan o quitan a sus socios de la
+  misma lista de checkboxes, así se combinan grupos con personas sueltas sin inventar un segundo
+  modo de selección. Es lo que reemplaza al "seleccionar todos" como herramienta real de un club
+  con 40 socios.
+- **Borrar un grupo no borra nada más.** La pertenencia es `ON DELETE CASCADE` y lo ya asignado no
+  depende del grupo: era el atajo para asignar, no el dueño de nada.
+
+Lo que sigue en la Fase 1: sesiones grupales con lugar y horario, asistencia, estado de membresía
+(sembrado, sin cobrar) y página pública para unirse. Ahí el perfil del socio probablemente se
+divida en dos: la parte administrativa (`MANAGE_MEMBERS`, con estado de pago) y la deportiva
+(`MANAGE_TRAINING`).
 
 ### Dashboard del coach: "¿de qué me tengo que ocupar?"
 

@@ -9,15 +9,18 @@ import { trainingPaces } from "@/lib/vdot";
 import { SportSelect } from "@/components/SportSelect";
 import { sportMeta } from "@/lib/sports";
 import type { WorkoutSport } from "@/generated/prisma/enums";
+import { memberIdsOfGroups, isGroupFullySelected, type GroupSummary } from "@/lib/groups";
 
 export function ScheduleForm({
   athletes,
   templates,
+  groups,
   defaultDate,
   defaultAthleteId,
 }: {
   athletes: { id: string; name: string; vdot: number | null }[];
   templates: { id: string; title: string; sport: WorkoutSport }[];
+  groups: GroupSummary[];
   defaultDate: string;
   defaultAthleteId?: string;
 }) {
@@ -51,6 +54,20 @@ export function ScheduleForm({
   function toggleAthlete(id: string) {
     setAthleteMembershipIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  }
+
+  /**
+   * Un grupo no es una selección aparte: agrega o quita a sus socios de la
+   * misma lista. Así se pueden combinar grupos con personas sueltas, y quien
+   * está en dos grupos no se duplica (ver memberIdsOfGroups).
+   */
+  function toggleGroup(group: GroupSummary) {
+    const ids = memberIdsOfGroups(groups, [group.id]);
+    setAthleteMembershipIds((prev) =>
+      isGroupFullySelected(group, prev)
+        ? prev.filter((id) => !ids.includes(id))
+        : [...new Set([...prev, ...ids])],
     );
   }
 
@@ -101,6 +118,28 @@ export function ScheduleForm({
             </button>
           </div>
         </div>
+        {groups.length > 0 && (
+          <div className="mb-2 flex flex-wrap items-center gap-1.5">
+            <span className="text-xs text-zinc-500">Grupos:</span>
+            {groups.map((g) => {
+              const active = isGroupFullySelected(g, athleteMembershipIds);
+              return (
+                <button
+                  key={g.id}
+                  type="button"
+                  onClick={() => toggleGroup(g)}
+                  disabled={g.memberIds.length === 0}
+                  title={g.memberIds.length === 0 ? "Este grupo no tiene socios todavía" : undefined}
+                  className={`rounded-full border px-2.5 py-0.5 text-xs disabled:opacity-40 ${
+                    active ? "border-zinc-900 font-medium" : "border-zinc-300 text-zinc-600"
+                  }`}
+                >
+                  {g.name} ({g.memberIds.length})
+                </button>
+              );
+            })}
+          </div>
+        )}
         <div className="flex max-h-48 flex-col gap-1 overflow-y-auto rounded-md border border-zinc-300 p-2">
           {athletes.map((a) => (
             <label key={a.id} className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-zinc-50">

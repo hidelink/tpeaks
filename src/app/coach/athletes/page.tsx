@@ -12,7 +12,7 @@ export default async function CoachAthletesPage() {
   const [athletes, staff, client] = await Promise.all([
     prisma.teamMembership.findMany({
       where: { teamId: membership.teamId, role: "ATHLETE" },
-      include: { user: true },
+      include: { user: true, groups: { include: { group: true } } },
       orderBy: { createdAt: "desc" },
     }),
     prisma.teamMembership.findMany({
@@ -94,7 +94,12 @@ export default async function CoachAthletesPage() {
               <li key={a.id} className="flex items-center justify-between py-3">
                 <div>
                   <p className="font-medium">{a.user.name}</p>
-                  <p className="text-sm text-zinc-500">{a.user.email}</p>
+                  <p className="text-sm text-zinc-500">
+                    {a.user.email}
+                    {a.groups.length > 0 && (
+                      <> · {a.groups.map((g) => g.group.name).join(", ")}</>
+                    )}
+                  </p>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="rounded-full bg-zinc-100 px-2 py-1 text-xs">

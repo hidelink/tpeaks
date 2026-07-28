@@ -24,7 +24,11 @@ export default async function AthleteProfilePage({
   // otro equipo aunque adivine el id.
   const athlete = await prisma.teamMembership.findFirst({
     where: { id, teamId: membership.teamId, role: "ATHLETE" },
-    include: { user: true, athleteProfile: true },
+    include: {
+      user: true,
+      athleteProfile: true,
+      groups: { include: { group: true } },
+    },
   });
 
   if (!athlete) notFound();
@@ -47,6 +51,18 @@ export default async function AthleteProfilePage({
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">{athlete.user.name}</h1>
         <p className="text-sm text-zinc-500">{athlete.user.email}</p>
+        {athlete.groups.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1">
+            {athlete.groups.map((g) => (
+              <span
+                key={g.id}
+                className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600"
+              >
+                {g.group.name}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* La página la ve quien gestiona socios, pero
