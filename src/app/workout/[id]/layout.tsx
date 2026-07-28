@@ -1,9 +1,8 @@
 import { redirect } from "next/navigation";
 import { getCurrentMembership } from "@/lib/permissions";
 import { AppHeader } from "@/components/AppHeader";
-import { COACH_NAV_LINKS, ATHLETE_NAV_LINKS } from "@/lib/nav-links";
+import { navLinksFor } from "@/lib/nav-links";
 import { teamAccentStyle } from "@/lib/team-theme";
-import { isStaff } from "@/lib/roles";
 
 /**
  * /workout/[id] es compartida entre coach y atleta (ver page.tsx: el
@@ -21,7 +20,7 @@ export default async function WorkoutLayout({
     redirect("/sign-in");
   }
 
-  const links = isStaff(membership.role) ? COACH_NAV_LINKS : ATHLETE_NAV_LINKS;
+  const links = navLinksFor(membership.role);
 
   return (
     <div className="flex flex-1 flex-col" style={teamAccentStyle(membership.team.primaryColor)}>

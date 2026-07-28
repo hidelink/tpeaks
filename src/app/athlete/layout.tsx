@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentMembership } from "@/lib/permissions";
 import { AppHeader } from "@/components/AppHeader";
-import { ATHLETE_NAV_LINKS } from "@/lib/nav-links";
+import { navLinksFor } from "@/lib/nav-links";
 import { teamAccentStyle } from "@/lib/team-theme";
 
 export default async function AthleteLayout({
@@ -27,7 +27,7 @@ export default async function AthleteLayout({
       <AppHeader
         teamName={membership.team.name}
         logoUrl={membership.team.logoUrl}
-        links={ATHLETE_NAV_LINKS}
+        links={navLinksFor(membership.role)}
       />
       <main className="flex-1 px-6 py-8">{children}</main>
     </div>

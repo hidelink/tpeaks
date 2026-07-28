@@ -515,9 +515,26 @@ cobro integrado". Esta fase es plomería para que las siguientes se puedan const
   separar bases: resuelve el riesgo concreto en 20 minutos en vez de duplicar infraestructura para
   un producto pre-ingreso.
 
+**Tres capas, y solo una es seguridad.** Al documentar los roles se encontró que ninguna pantalla
+del área de club tenía check propio: solo el layout preguntaba "¿es staff?". Las Server Actions sí
+validaban, así que nadie lograba hacer lo que no debía — pero un Administración podía abrir "Nueva
+plantilla", llenarla y recibir un error al guardar. No era un hueco de seguridad sino de honestidad
+de la interfaz, y se arregló antes de la Fase 1 porque esa fase agrega más pantallas de club.
+
+1. `navLinksFor(role)` esconde las pestañas que el rol no puede usar.
+2. `requirePageCapability` redirige a quien llegue por URL directa o link viejo.
+3. `requireCapability` en la Server Action lanza `ForbiddenError`. **Solo esta es seguridad**; las
+   otras dos existen para no mostrar un formulario que va a fallar.
+
+Los enlaces sueltos que viven en pantallas abiertas a todo el staff (los "+ Agregar" y "Asignar
+entrenamiento" del calendario, las herramientas de prescripción dentro del perfil de un socio)
+también se condicionan por capacidad — es donde más fácil se cuela el problema, porque la página
+sí le corresponde al rol y solo un botón no.
+
 Lo que sigue (Fase 1) es lo que convierte esto en un club: grupos por nivel, sesiones grupales con
 lugar y horario, asistencia, estado de membresía (sembrado, sin cobrar) y página pública para
-unirse.
+unirse. Ahí el perfil del socio probablemente se divida en dos: la parte administrativa
+(`MANAGE_MEMBERS`, con estado de pago) y la deportiva (`MANAGE_TRAINING`).
 
 ### Dashboard del coach: "¿de qué me tengo que ocupar?"
 

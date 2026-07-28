@@ -14,6 +14,7 @@ import { buildCalendarHref, type CalendarView } from "@/lib/calendar-url";
 import { toLocalCalendarDate, toQueryBoundary } from "@/lib/calendar-date";
 import { CalendarFilterBar } from "@/components/CalendarFilterBar";
 import { sportMeta } from "@/lib/sports";
+import { can } from "@/lib/roles";
 
 /**
  * Vista semanal o mensual (?view=week|month), con navegación y filtros por
@@ -29,6 +30,8 @@ export default async function CoachCalendarPage({
   const view: CalendarView = viewParam === "month" ? "month" : "week";
   const membership = await getCurrentMembership();
   if (!membership) return null;
+  // El calendario lo ve cualquiera del staff, pero asignar es de quien entrena.
+  const canTrain = can(membership.role, "MANAGE_TRAINING");
 
   const reference = parseDateParam(date);
 
@@ -104,12 +107,14 @@ export default async function CoachCalendarPage({
           <Link href={hrefFor({ date: next })} className="text-sm underline">
             Siguiente →
           </Link>
-          <Link
-            href="/coach/schedule/new"
-            className="rounded-full bg-[var(--team-accent)] px-4 py-2 text-sm font-medium text-white"
-          >
-            Asignar entrenamiento
-          </Link>
+          {canTrain && (
+            <Link
+              href="/coach/schedule/new"
+              className="rounded-full bg-[var(--team-accent)] px-4 py-2 text-sm font-medium text-white"
+            >
+              Asignar entrenamiento
+            </Link>
+          )}
         </div>
       </div>
 
@@ -148,12 +153,14 @@ export default async function CoachCalendarPage({
                 <p className="text-sm font-medium capitalize">
                   {format(day, view === "week" ? "EEEE d" : "d", { locale: es })}
                 </p>
-                <Link
-                  href={`/coach/schedule/new?date=${dateParam}`}
-                  className="text-xs text-zinc-500 hover:underline"
-                >
-                  + Agregar
-                </Link>
+                {canTrain && (
+                  <Link
+                    href={`/coach/schedule/new?date=${dateParam}`}
+                    className="text-xs text-zinc-500 hover:underline"
+                  >
+                    + Agregar
+                  </Link>
+                )}
               </div>
               <div className="flex flex-col gap-2">
                 {visible.map((w) => (

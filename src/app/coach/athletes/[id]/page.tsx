@@ -3,13 +3,14 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { prisma } from "@/lib/prisma";
-import { getCurrentMembership } from "@/lib/permissions";
 import { getWeeklyLoadSeries } from "@/lib/training-load";
 import { TrainingLoadChart } from "@/components/TrainingLoadChart";
 import { toLocalCalendarDate } from "@/lib/calendar-date";
 import { trainingPaces } from "@/lib/vdot";
 import { PrivateNoteForm } from "./PrivateNoteForm";
 import { TrainingPacesCard } from "./TrainingPacesCard";
+import { requirePageCapability } from "@/lib/page-guards";
+import { can } from "@/lib/roles";
 
 export default async function AthleteProfilePage({
   params,
@@ -17,8 +18,7 @@ export default async function AthleteProfilePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const membership = await getCurrentMembership();
-  if (!membership) return null;
+  const membership = await requirePageCapability("MANAGE_MEMBERS");
 
   // Scoped a membership.teamId: un coach nunca debe poder ver el atleta de
   // otro equipo aunque adivine el id.
@@ -40,6 +40,7 @@ export default async function AthleteProfilePage({
   ]);
 
   const vdot = athlete.athleteProfile?.vdot ?? null;
+  const canTrain = can(membership.role, "MANAGE_TRAINING");
 
   return (
     <div className="flex flex-col gap-6">
@@ -48,18 +49,24 @@ export default async function AthleteProfilePage({
         <p className="text-sm text-zinc-500">{athlete.user.email}</p>
       </div>
 
-      <PrivateNoteForm
-        athleteMembershipId={athlete.id}
-        initialNote={athlete.athleteProfile?.coachPrivateNote ?? ""}
-      />
+      {/* La página la ve quien gestiona socios (incluida Administración), pero
+          las herramientas de prescripción son solo de quien entrena. */}
+      {canTrain && (
+        <>
+          <PrivateNoteForm
+            athleteMembershipId={athlete.id}
+            initialNote={athlete.athleteProfile?.coachPrivateNote ?? ""}
+          />
 
-      <TrainingPacesCard
-        athleteMembershipId={athlete.id}
-        raceDistanceMeters={athlete.athleteProfile?.raceResultDistanceMeters ?? null}
-        raceTimeSeconds={athlete.athleteProfile?.raceResultTimeSeconds ?? null}
-        vdot={vdot}
-        paces={vdot === null ? null : trainingPaces(vdot)}
-      />
+          <TrainingPacesCard
+            athleteMembershipId={athlete.id}
+            raceDistanceMeters={athlete.athleteProfile?.raceResultDistanceMeters ?? null}
+            raceTimeSeconds={athlete.athleteProfile?.raceResultTimeSeconds ?? null}
+            vdot={vdot}
+            paces={vdot === null ? null : trainingPaces(vdot)}
+          />
+        </>
+      )}
 
       <div className="rounded-xl border border-zinc-200 p-4">
         <h2 className="mb-1 font-medium">Carga de entrenamiento</h2>

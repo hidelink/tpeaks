@@ -1,7 +1,7 @@
 import { format } from "date-fns";
 import { prisma } from "@/lib/prisma";
-import { getCurrentMembership } from "@/lib/permissions";
 import { ScheduleForm } from "./ScheduleForm";
+import { requirePageCapability } from "@/lib/page-guards";
 
 export default async function NewScheduledWorkoutPage({
   searchParams,
@@ -9,8 +9,7 @@ export default async function NewScheduledWorkoutPage({
   searchParams: Promise<{ date?: string; athleteId?: string }>;
 }) {
   const { date, athleteId } = await searchParams;
-  const membership = await getCurrentMembership();
-  if (!membership) return null;
+  const membership = await requirePageCapability("MANAGE_TRAINING");
 
   const [athletes, templates] = await Promise.all([
     prisma.teamMembership.findMany({

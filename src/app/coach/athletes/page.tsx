@@ -1,14 +1,13 @@
 import Link from "next/link";
 import { clerkClient } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
-import { getCurrentMembership } from "@/lib/permissions";
 import { InviteAthleteForm } from "./InviteAthleteForm";
 import { RevokeInvitationButton } from "./RevokeInvitationButton";
 import { ROLE_LABELS, STAFF_ROLES } from "@/lib/roles";
+import { requirePageCapability } from "@/lib/page-guards";
 
 export default async function CoachAthletesPage() {
-  const membership = await getCurrentMembership();
-  if (!membership) return null;
+  const membership = await requirePageCapability("MANAGE_MEMBERS");
 
   const [athletes, staff, client] = await Promise.all([
     prisma.teamMembership.findMany({

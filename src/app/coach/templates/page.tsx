@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { getCurrentMembership } from "@/lib/permissions";
 import { parseWorkoutStructure } from "@/lib/workout-structure";
 import { DeleteTemplateButton } from "./DeleteTemplateButton";
 import { sportMeta, groupBySport, SPORTS } from "@/lib/sports";
 import type { WorkoutSport } from "@/generated/prisma/enums";
+import { requirePageCapability } from "@/lib/page-guards";
 
 type Filters = { sport?: string; tag?: string; q?: string };
 
@@ -27,8 +27,7 @@ export default async function CoachTemplatesPage({
   searchParams: Promise<Filters>;
 }) {
   const { sport, tag, q } = await searchParams;
-  const membership = await getCurrentMembership();
-  if (!membership) return null;
+  const membership = await requirePageCapability("MANAGE_TRAINING");
 
   // El sport llega de la URL: si no es un valor del enum se ignora en vez de
   // reventar la query.

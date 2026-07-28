@@ -1,9 +1,8 @@
-import { getCurrentMembership } from "@/lib/permissions";
 import { BrandingForm } from "./BrandingForm";
+import { requirePageCapability } from "@/lib/page-guards";
 
 export default async function CoachSettingsPage() {
-  const membership = await getCurrentMembership();
-  if (!membership) return null;
+  const membership = await requirePageCapability("MANAGE_CLUB");
 
   return (
     <div className="flex flex-col gap-8">

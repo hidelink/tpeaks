@@ -55,7 +55,8 @@ src/lib/clerk-sync.ts          upsert de Team/User/TeamMembership desde datos de
 src/lib/dates.ts               rangos de semana/mes + navegación (?date=yyyy-MM-dd&view=week|month) del calendario
 src/lib/calendar-date.ts       toLocalCalendarDate/todayAsUtcMidnight — normaliza fechas @db.Date (ver nota de timezone abajo)
 src/lib/calendar-url.ts        construye URLs de calendario preservando filtros activos
-src/lib/nav-links.ts           links de navegación por rol, compartidos entre los layouts de coach/atleta y /workout/[id]
+src/lib/nav-links.ts           navegación filtrada por capacidad (navLinksFor), compartida entre los layouts de club/socio y /workout/[id]
+src/lib/page-guards.ts         requirePageCapability — guard de páginas: redirige en vez de mostrar un formulario que va a fallar
 src/components/AppHeader.tsx     header con nav compartido (coach, atleta, y /workout/[id] que vive fuera de ambos árboles)
 src/components/SegmentEditor.tsx  editor de segmentos compartido entre plantillas, asignación ad hoc y edición
 src/components/TemplateForm.tsx   formulario compartido entre crear y editar una plantilla
@@ -114,6 +115,14 @@ al iniciar sesión como dueño. Hay un test que fija exactamente ese caso.
 **Limitación conocida:** el rol es un solo valor, así que no se puede expresar "dueño que además
 entrena como socio", común en clubes chicos. El cambio será pasar `role` a una lista; las
 capacidades ya están listas porque nada compara el rol directamente.
+
+Las tres capas se aplican juntas, y solo una es seguridad:
+
+1. **Navegación** — `navLinksFor(role)` esconde las pestañas que el rol no puede usar. Un
+   Administración no ve "Plantillas"; un coach no ve "Ajustes".
+2. **Página** — `requirePageCapability` redirige a `/coach` a quien llegue por URL o link viejo.
+3. **Server Action** — `requireCapability` lanza `ForbiddenError`. **Esta es la única que es
+   seguridad**; las otras dos existen para no mostrar un formulario que va a fallar al guardar.
 
 En Clerk, quien crea la organización queda como `OWNER`. Después se ajusta con:
 
