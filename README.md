@@ -90,6 +90,21 @@ base de Supabase que usa el entorno local. Sirve para enseñárselo a alguien; n
 entorno de producción de verdad (falta instancia de Clerk de producción con dominio propio, y
 una base separada de la de desarrollo).
 
+### Nota: dos URLs de base de datos, y la diferencia tumbó producción
+
+`DATABASE_URL` apuntaba al pooler de Supabase en el puerto **5432 = session mode**, donde cada
+conexión se queda con un backend de Postgres dedicado y el tope son 15 clientes. Cada instancia
+serverless abre su propio pool de `pg` (default: hasta 10), y Next.js precarga los links del nav,
+así que una sola visita dispara media docena de renders en paralelo. Resultado: toda la app
+devolvió 500 con `(EMAXCONNSESSION) max clients reached in session mode`.
+
+- **`DATABASE_URL`** → pooler en **transaction mode, puerto 6543**. Es la que usa la app.
+- **`DIRECT_URL`** → conexión directa, **puerto 5432**. Solo para `prisma migrate` (las
+  migraciones usan advisory locks que transaction mode no soporta). La lee `prisma.config.ts`.
+- El pool de `pg` está acotado a 3 por instancia (`DATABASE_POOL_MAX`) en `src/lib/prisma.ts`.
+
+Si clonas esto y ves 500 en todas las rutas, revisa primero el puerto de `DATABASE_URL`.
+
 ### Nota: el cumplimiento semanal medía otra cosa
 
 `Cumplimiento semanal` dividía entre **todos** los entrenamientos de la semana, incluidos los de

@@ -9,6 +9,10 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    // Las migraciones necesitan una conexión directa (session mode, puerto
+    // 5432): el pooler en transaction mode no soporta sentencias que abarcan
+    // varias transacciones ni advisory locks. DATABASE_URL es del runtime y
+    // apunta al pooler — ver el comentario en src/lib/prisma.ts.
+    url: process.env["DIRECT_URL"] ?? process.env["DATABASE_URL"],
   },
 });
