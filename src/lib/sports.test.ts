@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { SPORTS, sportMeta, RUNNING_KM_SPORTS } from "./sports";
+import { SPORTS, sportMeta, RUNNING_KM_SPORTS, groupBySport } from "./sports";
 import { WorkoutSport } from "@/generated/prisma/enums";
 
 describe("SPORTS", () => {
@@ -39,6 +39,29 @@ describe("sportMeta", () => {
   it("falla ruidosamente ante un deporte desconocido en vez de renderizar vacío", () => {
     // @ts-expect-error — a propósito: simula un valor nuevo del enum sin metadata.
     expect(() => sportMeta("PADEL")).toThrow(/sports.ts/);
+  });
+});
+
+describe("groupBySport", () => {
+  it("agrupa respetando el orden de SPORTS, no el de entrada", () => {
+    const groups = groupBySport([
+      { id: "a", sport: "MOBILITY" as const },
+      { id: "b", sport: "RUN" as const },
+      { id: "c", sport: "STRENGTH" as const },
+      { id: "d", sport: "RUN" as const },
+    ]);
+    expect(groups.map((g) => g.meta.value)).toEqual(["RUN", "STRENGTH", "MOBILITY"]);
+    expect(groups[0].items.map((i) => i.id)).toEqual(["b", "d"]);
+  });
+
+  it("omite los grupos vacíos", () => {
+    const groups = groupBySport([{ sport: "BIKE" as const }]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].meta.value).toBe("BIKE");
+  });
+
+  it("con una lista vacía no devuelve grupos", () => {
+    expect(groupBySport([])).toEqual([]);
   });
 });
 

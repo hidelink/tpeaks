@@ -106,6 +106,10 @@ progresión de un levantamiento. Es un cambio aditivo al contrato Zod cuando el 
 Un campo que no aplica al deporte se esconde, **pero nunca si ya tiene valor**: cambiar una sesión
 de correr a fuerza no borra ni oculta en silencio la distancia que ya tenía.
 
+La lista de plantillas se agrupa por tipo y tiene filtros: chips por deporte con su conteo, tags
+clicables y búsqueda por título (`?sport=&tag=&q=`). Agrupar solo no basta cuando casi todas las
+plantillas son de correr — dentro de ese grupo lo que discrimina son los tags.
+
 La gráfica de carga (RPE × duración) no cambió: es comparable entre deportes, que es justamente
 para lo que sirve. La métrica de kilómetros sí — ahora dice "Km corriendo" y solo suma correr y
 trail, porque sumar km de bici con km de carrera da un número sin significado.

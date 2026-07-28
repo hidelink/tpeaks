@@ -509,6 +509,12 @@ Por eso se eligió la opción mínima: **una etiqueta, no un modelo por deporte.
 - **Un campo que no aplica se esconde, pero nunca si ya tiene valor.** Cambiar una sesión de correr
   a fuerza dejaría una distancia guardada e invisible; en vez de borrarla en silencio, se sigue
   mostrando y el coach decide.
+- **La lista de plantillas se agrupa por tipo, pero agrupar no era suficiente.** Para un coach de
+  running la distribución está muy sesgada: de 30 plantillas, ~24 son de correr. Agrupar da un
+  grupo enorme y varios diminutos — ayuda a llegar a "fuerza", no a encontrar *la* plantilla de
+  correr correcta. Lo que discrimina dentro de correr son los tags que ya existían, así que además
+  de los grupos hay chips por deporte con conteo, tags clicables y búsqueda por título
+  (`?sport=&tag=&q=`), todo como enlaces y un form GET nativo — sin estado de cliente.
 - **"Km semanales" pasó a "Km corriendo"** y solo suma correr y trail. Sumar los km de una sesión
   de bici con los de un fondo produce un número que no significa nada. Los demás deportes siguen
   contando en cumplimiento y en la gráfica de carga, donde sí son comparables.

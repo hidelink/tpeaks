@@ -128,6 +128,19 @@ export function sportMeta(sport: WorkoutSport): SportMeta {
   return meta;
 }
 
+/**
+ * Agrupa por deporte respetando el orden de SPORTS (correr primero, "otro" al
+ * final) y omitiendo los grupos vacíos — así la lista de plantillas siempre
+ * sale en el mismo orden sin importar en qué orden se crearon.
+ */
+export function groupBySport<T extends { sport: WorkoutSport }>(
+  items: T[],
+): { meta: SportMeta; items: T[] }[] {
+  return SPORTS.map((meta) => ({ meta, items: items.filter((i) => i.sport === meta.value) })).filter(
+    (g) => g.items.length > 0,
+  );
+}
+
 /** Para filtrar en Prisma la métrica de km corriendo. */
 export const RUNNING_KM_SPORTS: WorkoutSport[] = SPORTS.filter((s) => s.countsAsRunningKm).map(
   (s) => s.value,
