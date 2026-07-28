@@ -71,13 +71,13 @@ export default async function AthleteCalendarPage({
           <div className="flex rounded-full border border-zinc-300 p-0.5 text-sm">
             <Link
               href={hrefFor({ view: "week" })}
-              className={`rounded-full px-3 py-1 ${view === "week" ? "bg-black text-white" : ""}`}
+              className={`rounded-full px-3 py-1 ${view === "week" ? "bg-[var(--team-accent)] text-white" : ""}`}
             >
               Semana
             </Link>
             <Link
               href={hrefFor({ view: "month" })}
-              className={`rounded-full px-3 py-1 ${view === "month" ? "bg-black text-white" : ""}`}
+              className={`rounded-full px-3 py-1 ${view === "month" ? "bg-[var(--team-accent)] text-white" : ""}`}
             >
               Mes
             </Link>

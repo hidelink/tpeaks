@@ -83,13 +83,13 @@ export default async function CoachCalendarPage({
           <div className="flex rounded-full border border-zinc-300 p-0.5 text-sm">
             <Link
               href={hrefFor({ view: "week" })}
-              className={`rounded-full px-3 py-1 ${view === "week" ? "bg-black text-white" : ""}`}
+              className={`rounded-full px-3 py-1 ${view === "week" ? "bg-[var(--team-accent)] text-white" : ""}`}
             >
               Semana
             </Link>
             <Link
               href={hrefFor({ view: "month" })}
-              className={`rounded-full px-3 py-1 ${view === "month" ? "bg-black text-white" : ""}`}
+              className={`rounded-full px-3 py-1 ${view === "month" ? "bg-[var(--team-accent)] text-white" : ""}`}
             >
               Mes
             </Link>
@@ -105,7 +105,7 @@ export default async function CoachCalendarPage({
           </Link>
           <Link
             href="/coach/schedule/new"
-            className="rounded-full bg-black px-4 py-2 text-sm font-medium text-white"
+            className="rounded-full bg-[var(--team-accent)] px-4 py-2 text-sm font-medium text-white"
           >
             Asignar entrenamiento
           </Link>

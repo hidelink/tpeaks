@@ -1,4 +1,5 @@
 import { getCurrentMembership } from "@/lib/permissions";
+import { BrandingForm } from "./BrandingForm";
 
 export default async function CoachSettingsPage() {
   const membership = await getCurrentMembership();
@@ -13,13 +14,16 @@ export default async function CoachSettingsPage() {
         <p className="text-sm text-zinc-500">Nombre: {membership.team.name}</p>
       </section>
 
-      <section className="rounded-xl border border-zinc-200 p-4 opacity-60">
-        <h2 className="mb-2 font-medium">Marca (white-label)</h2>
-        <p className="text-sm text-zinc-500">
-          Logo y color del equipo — el modelo de datos ya soporta{" "}
-          <code>Team.logoUrl</code> y <code>Team.primaryColor</code>, la pantalla
-          de edición y el theming en runtime se activan después del MVP.
+      <section className="rounded-xl border border-zinc-200 p-4">
+        <h2 className="mb-1 font-medium">Marca (white-label)</h2>
+        <p className="mb-4 text-sm text-zinc-500">
+          El logo aparece en el header y el color de acento en los botones principales,
+          en toda la plataforma — así se ve como propia del equipo.
         </p>
+        <BrandingForm
+          initialLogoUrl={membership.team.logoUrl ?? ""}
+          initialPrimaryColor={membership.team.primaryColor ?? ""}
+        />
       </section>
 
       <section className="rounded-xl border border-zinc-200 p-4 opacity-60">

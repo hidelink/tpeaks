@@ -23,6 +23,14 @@ export default async function Home() {
         >
           Iniciar sesión
         </Link>
+        <footer className="mt-8 flex gap-4 text-xs text-zinc-400">
+          <Link href="/terms" className="underline">
+            Términos de servicio
+          </Link>
+          <Link href="/privacy" className="underline">
+            Aviso de privacidad
+          </Link>
+        </footer>
       </div>
     );
   }

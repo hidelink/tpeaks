@@ -44,7 +44,7 @@ export function InviteAthleteForm() {
       <button
         type="submit"
         disabled={isPending}
-        className="rounded-full bg-black px-4 py-2 text-sm font-medium whitespace-nowrap text-white disabled:opacity-50"
+        className="rounded-full bg-[var(--team-accent)] px-4 py-2 text-sm font-medium whitespace-nowrap text-white disabled:opacity-50"
       >
         {isPending ? "Invitando..." : "Invitar atleta"}
       </button>

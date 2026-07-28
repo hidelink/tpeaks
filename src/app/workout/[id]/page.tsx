@@ -85,7 +85,7 @@ export default async function WorkoutDetailPage({
           <div className="flex shrink-0 flex-col items-end gap-2">
             <Link
               href={`/coach/schedule/new?date=${format(localDate, "yyyy-MM-dd")}&athleteId=${workout.athleteMembershipId}`}
-              className="rounded-full bg-black px-4 py-2 text-sm font-medium whitespace-nowrap text-white"
+              className="rounded-full bg-[var(--team-accent)] px-4 py-2 text-sm font-medium whitespace-nowrap text-white"
             >
               + Asignar otro
             </Link>

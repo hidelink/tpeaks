@@ -83,7 +83,7 @@ export function CompletionForm({ scheduledWorkoutId }: { scheduledWorkoutId: str
       <button
         type="submit"
         disabled={isPending}
-        className="self-start rounded-full bg-black px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        className="self-start rounded-full bg-[var(--team-accent)] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
       >
         {isPending ? "Guardando..." : "Completar"}
       </button>

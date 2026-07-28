@@ -9,6 +9,9 @@ vi.mock("@/lib/prisma", () => ({
     teamMembership: {
       findFirst: vi.fn(),
     },
+    user: {
+      findUnique: vi.fn(),
+    },
   },
 }));
 
@@ -19,10 +22,17 @@ vi.mock("@/lib/clerk-sync", () => ({
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { syncMembershipFromClerk } from "@/lib/clerk-sync";
-import { getCurrentMembership, requireRole, requireMembership, ForbiddenError } from "./permissions";
+import {
+  getCurrentMembership,
+  requireRole,
+  requireMembership,
+  requirePlatformAdmin,
+  ForbiddenError,
+} from "./permissions";
 
 const authMock = auth as unknown as ReturnType<typeof vi.fn>;
 const findFirstMock = prisma.teamMembership.findFirst as unknown as ReturnType<typeof vi.fn>;
+const findUserMock = prisma.user.findUnique as unknown as ReturnType<typeof vi.fn>;
 const syncMock = syncMembershipFromClerk as unknown as ReturnType<typeof vi.fn>;
 
 const fakeMembership = (role: "COACH" | "ATHLETE") => ({
@@ -121,6 +131,38 @@ describe("requireMembership", () => {
     authMock.mockResolvedValue({ userId: null, orgId: null, orgRole: null });
 
     await expect(requireMembership()).rejects.toThrow("No perteneces a ningún equipo.");
+  });
+});
+
+describe("requirePlatformAdmin", () => {
+  it("retorna el user si isPlatformAdmin es true", async () => {
+    authMock.mockResolvedValue({ userId: "user_1" });
+    const adminUser = { id: "user_1", email: "admin@tpeaks.dev", isPlatformAdmin: true };
+    findUserMock.mockResolvedValue(adminUser);
+
+    const result = await requirePlatformAdmin();
+    expect(result).toBe(adminUser);
+  });
+
+  it("lanza ForbiddenError si el usuario existe pero no es admin", async () => {
+    authMock.mockResolvedValue({ userId: "user_1" });
+    findUserMock.mockResolvedValue({ id: "user_1", email: "coach@equipo.com", isPlatformAdmin: false });
+
+    await expect(requirePlatformAdmin()).rejects.toThrow(ForbiddenError);
+  });
+
+  it("lanza ForbiddenError sin sesión, sin tocar la base de datos", async () => {
+    authMock.mockResolvedValue({ userId: null });
+
+    await expect(requirePlatformAdmin()).rejects.toThrow(ForbiddenError);
+    expect(findUserMock).not.toHaveBeenCalled();
+  });
+
+  it("no depende de un org activo (a diferencia de getCurrentMembership)", async () => {
+    authMock.mockResolvedValue({ userId: "user_1", orgId: null });
+    findUserMock.mockResolvedValue({ id: "user_1", email: "admin@tpeaks.dev", isPlatformAdmin: true });
+
+    await expect(requirePlatformAdmin()).resolves.toBeTruthy();
   });
 });
 

@@ -62,19 +62,31 @@ src/lib/actions/invite.ts       invitar/revocar atleta vía la API de invitacion
 src/lib/actions/athlete-profile.ts  nota privada del coach sobre un atleta
 src/lib/training-load.ts       carga de entrenamiento por sRPE (RPE × duración), semanal + promedio móvil de 4 semanas
 src/components/TrainingLoadChart.tsx  gráfica de carga (barras + línea de referencia), en dashboard de atleta y perfil que ve el coach
+src/lib/actions/team.ts         marca del equipo (logo + color) — white-label
+src/lib/team-theme.ts          --team-accent como CSS var, aplicada en cada layout autenticado
 src/app/coach/                  rutas y layout del coach
 src/app/athlete/                rutas y layout del atleta
 src/app/workout/[id]/           detalle de entrenamiento compartido (render condicional por rol), con su propio layout + edición + duplicar
+src/app/admin/                  admin de plataforma (soporte interno) — lista de equipos + detalle, ver requirePlatformAdmin
+src/app/terms/, src/app/privacy/  páginas legales públicas (borrador, ver nota abajo)
 src/app/api/webhooks/clerk/     sincroniza User/Team/TeamMembership desde Clerk
 ```
 
 ## Estado actual (MVP Fase 1, en construcción)
 
-Ya funciona (una vez conectada la base de datos y Clerk): auth + creación de equipo vía Clerk Organizations (con onboarding para crear el equipo si el usuario no tiene uno todavía), invitar/revocar atletas por email (invitación real de Clerk Organizations, ya no un placeholder), sincronización de usuarios/equipos por webhook o al vuelo si el webhook no está configurado, dashboard de coach y atleta con las 4 métricas, calendario **semanal y mensual** navegable (anterior/siguiente/hoy) con filtro por atleta y búsqueda por título, creación/edición/borrado de plantillas de entrenamiento con editor de segmentos, **asignación de un entrenamiento a uno o varios atletas a la vez** (checklist con "seleccionar todos" — el caso real de un coach con equipo, no uno-por-uno), edición de un entrenamiento ya asignado (incluye "moverlo" cambiando la fecha), duplicar/copiar un entrenamiento a otra fecha o a otro atleta, detalle de entrenamiento con feedback manual del atleta y comentarios del coach, perfil de atleta con historial + nota privada del coach editable, y una gráfica de **carga de entrenamiento** (sRPE semanal + promedio móvil de 4 semanas) en el dashboard del atleta y en el perfil que ve el coach.
+Ya funciona (una vez conectada la base de datos y Clerk): auth + creación de equipo vía Clerk Organizations (con onboarding para crear el equipo si el usuario no tiene uno todavía), invitar/revocar atletas por email (invitación real de Clerk Organizations, ya no un placeholder), sincronización de usuarios/equipos por webhook o al vuelo si el webhook no está configurado, dashboard de coach y atleta con las 4 métricas, calendario **semanal y mensual** navegable (anterior/siguiente/hoy) con filtro por atleta y búsqueda por título, creación/edición/borrado de plantillas de entrenamiento con editor de segmentos, **asignación de un entrenamiento a uno o varios atletas a la vez** (checklist con "seleccionar todos" — el caso real de un coach con equipo, no uno-por-uno), edición de un entrenamiento ya asignado (incluye "moverlo" cambiando la fecha), duplicar/copiar un entrenamiento a otra fecha o a otro atleta, detalle de entrenamiento con feedback manual del atleta y comentarios del coach, perfil de atleta con historial + nota privada del coach editable, una gráfica de **carga de entrenamiento** (sRPE semanal + promedio móvil de 4 semanas) en el dashboard del atleta y en el perfil que ve el coach, **white-label activado** (logo + color de acento configurables en Ajustes, aplicados en runtime en toda la plataforma), un **rol de admin de plataforma** (`/admin`, ve todos los equipos para soporte interno — se activa a mano con `scripts/make-admin.ts`, no hay auto-registro), y páginas públicas de **Términos de servicio / Aviso de privacidad**.
 
 Pendiente (ver Paso 8 del spec, "Nice to have"): drag-and-drop real en el calendario (mover/duplicar hoy se hacen desde botones explícitos, no arrastrando); notificaciones in-app de comentarios nuevos.
 
-No construido todavía (a propósito, ver Paso 2 del spec): cobros reales con Stripe, theming/logo por equipo en runtime, integraciones con relojes/Strava.
+No construido todavía (a propósito, ver Paso 2 del spec): cobros reales con Stripe. Tampoco desplegado — todo esto sigue corriendo en local (`npm run dev`) con llaves de Clerk de desarrollo; falta Vercel + Clerk de producción + Supabase de producción antes de que esto sea alcanzable por alguien que no seas tú.
+
+### Nota: páginas legales son un borrador
+
+`src/app/terms/page.tsx` y `src/app/privacy/page.tsx` tienen contenido real (no Lorem Ipsum),
+pensado honestamente para lo que la plataforma recolecta — pero no son una revisión legal.
+Antes de operar con usuarios reales, en especial si vas a cobrar o si vas a tener atletas
+menores de edad, hazlas revisar por alguien con conocimiento legal (en México, la referencia
+relevante es la LFPDPPP, no GDPR).
 
 ### Nota importante: timezone en fechas de entrenamiento
 
@@ -148,6 +160,21 @@ npx tsx scripts/seed-test-workouts.ts [email-del-atleta]
 # default: member@yopmail.com
 ```
 
+## Admin de plataforma
+
+No hay UI de auto-registro para el rol de admin (`/admin`) — son muy pocas personas las que
+lo necesitan. Para dárselo a un usuario que ya exista:
+
+```bash
+npx tsx scripts/make-admin.ts tu-email@ejemplo.com
+npx tsx scripts/make-admin.ts tu-email@ejemplo.com --revoke  # para quitarlo
+```
+
 ## Verificación sin sesión activa
 
-Muchos de estos cambios se validaron con `tsc --noEmit`, `eslint` y `next build` — no con pruebas visuales en el navegador, porque el asistente no tiene forma de iniciar sesión con tu cuenta de Clerk. Antes de darlo por bueno del todo, prueba manualmente: crear/editar una plantilla, asignar/editar/duplicar un entrenamiento, y navegar entre semanas en ambos calendarios (coach y atleta).
+Muchos de estos cambios se validaron con `tsc --noEmit`, `eslint`, `vitest` y `next build` — no
+con pruebas visuales en el navegador, porque el asistente no tiene forma de iniciar sesión con
+tu cuenta de Clerk. Antes de darlo por bueno del todo, prueba manualmente: crear/editar una
+plantilla, asignar/editar/duplicar un entrenamiento, navegar entre semanas en ambos calendarios,
+poner un logo/color en Ajustes y confirmar que el header y los botones cambian, y (después de
+correr `make-admin.ts` contigo mismo) entrar a `/admin` y ver tu equipo listado.

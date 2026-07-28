@@ -56,3 +56,21 @@ export async function requireMembership() {
   }
   return membership;
 }
+
+/**
+ * Admin de plataforma (soporte interno) — a propósito NO usa
+ * getCurrentMembership(): un admin necesita poder ver equipos a los que no
+ * pertenece, así que se verifica contra User.isPlatformAdmin directo, sin
+ * pasar por el Team/Organization activo en la sesión. Se activa a mano
+ * (scripts/make-admin.ts), no hay UI de auto-gestión.
+ */
+export async function requirePlatformAdmin() {
+  const { userId } = await auth();
+  if (!userId) throw new ForbiddenError("No has iniciado sesión.");
+
+  const user = await prisma.user.findUnique({ where: { clerkUserId: userId } });
+  if (!user?.isPlatformAdmin) {
+    throw new ForbiddenError("No tienes acceso de administrador.");
+  }
+  return user;
+}

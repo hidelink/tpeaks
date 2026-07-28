@@ -19,7 +19,7 @@ export default async function CoachTemplatesPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Plantillas</h1>
         <Link
           href="/coach/templates/new"
-          className="rounded-full bg-black px-4 py-2 text-sm font-medium text-white"
+          className="rounded-full bg-[var(--team-accent)] px-4 py-2 text-sm font-medium text-white"
         >
           Nueva plantilla
         </Link>

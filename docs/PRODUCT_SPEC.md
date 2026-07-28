@@ -43,7 +43,7 @@
 
 ### Explícitamente NO construimos todavía
 - Cobros reales con Stripe (solo el modelo de datos y el punto de extensión).
-- Theming/logo dinámico por equipo en la UI (el campo `logoUrl`/`primaryColor` existe en `Team`, pero no hay pantalla de configuración de marca ni theming en runtime).
+- ~~Theming/logo dinámico por equipo en la UI~~ — construido después del MVP inicial (ver Paso 8, backlog "Nice to have").
 - Apps móviles nativas o cualquier integración con relojes/Strava/Apple Health.
 - Roles intermedios (coach asistente con permisos limitados) — el modelo lo permite (enum ampliable) pero no se construye UI para eso.
 - Notificaciones push/email transaccionales (recordatorios de entrenamiento, etc.) — se puede agregar sin rediseño.
@@ -392,6 +392,13 @@ Esto es lo que copia `ScheduledWorkout.structure` desde `WorkoutTemplate.structu
 
 **Regla de enforcement:** todo esto se valida en el servidor (Server Actions / route handlers), nunca solo en el cliente. El helper `requireRole(membership, role)` y `assertTeamHasAccess(teamId)` se llaman al inicio de cada acción sensible.
 
+**Implementado:** `User.isPlatformAdmin` (no `MembershipRole` — un admin necesita ver equipos a
+los que no pertenece, así que vive en `User`, no en `TeamMembership.role`) + `requirePlatformAdmin()`
+en `src/lib/permissions.ts` + rutas `/admin` (lista de equipos) y `/admin/teams/[id]` (roster +
+conteos). Sin auto-registro: se activa a mano con `scripts/make-admin.ts`. Alcance real hoy:
+ver equipos y su roster para soporte — **no** incluye un dashboard de cumplimiento agregado
+cross-team ni impersonar usuarios; ambos quedan como siguiente escalón si hace falta.
+
 ---
 
 ## Paso 6 — Flujos críticos
@@ -466,11 +473,13 @@ Esto es lo que copia `ScheduledWorkout.structure` desde `WorkoutTemplate.structu
 - [ ] Drag-and-drop real en el calendario (mejora sobre los botones explícitos de arriba).
 
 **Nice to have (después de validar Fase 1)**
-- Theming/logo dinámico por equipo (activa lo que ya existe en `Team.logoUrl`/`primaryColor`).
+- [x] Theming/logo dinámico por equipo — `Team.logoUrl`/`primaryColor` editables en Ajustes, aplicados en runtime vía `--team-accent` (ver `src/lib/team-theme.ts`) en header y botones principales de toda la plataforma. No hay subida de archivos: el coach pega una URL de imagen ya alojada.
 - Exportar historial del atleta a CSV/PDF.
 - Recordatorios por email del entrenamiento del día.
 - Roles de coach asistente con permisos limitados.
 - [x] Analítica de tendencia — carga de entrenamiento semanal (sRPE) + promedio móvil de 4 semanas, ver abajo.
+- [x] Admin de plataforma para soporte interno — ver Paso 5.
+- [x] Páginas legales (Términos de servicio / Aviso de privacidad) — borrador honesto sobre qué datos se recolectan, no una revisión legal real. Ver `src/app/terms/` y `src/app/privacy/`.
 
 ### Carga de entrenamiento (sRPE)
 

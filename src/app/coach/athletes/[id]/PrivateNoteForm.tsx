@@ -43,7 +43,7 @@ export function PrivateNoteForm({
         <button
           type="submit"
           disabled={isPending || note === initialNote}
-          className="rounded-full bg-black px-4 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+          className="rounded-full bg-[var(--team-accent)] px-4 py-1.5 text-xs font-medium text-white disabled:opacity-50"
         >
           {isPending ? "Guardando..." : "Guardar nota"}
         </button>
