@@ -5,14 +5,19 @@ import { useRouter } from "next/navigation";
 import { SegmentEditor } from "@/components/SegmentEditor";
 import { updateScheduledWorkout } from "@/lib/actions/schedule";
 import type { WorkoutSegment, WorkoutStructure } from "@/lib/workout-structure";
+import { trainingPaces } from "@/lib/vdot";
 
 export function EditWorkoutForm({
   workoutId,
   initial,
+  vdot,
 }: {
   workoutId: string;
   initial: { date: string; title: string; coachNote?: string; structure: WorkoutStructure };
+  /** VDOT del atleta dueño de este entrenamiento, si el coach ya lo capturó. */
+  vdot: number | null;
 }) {
+  const paces = vdot === null ? null : trainingPaces(vdot);
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [date, setDate] = useState(initial.date);
@@ -80,6 +85,7 @@ export function EditWorkoutForm({
             setSegments(segs);
             setError(null);
           }}
+          paces={paces}
         />
       </div>
 

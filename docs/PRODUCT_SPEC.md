@@ -505,6 +505,14 @@ es de las tareas que más tiempo le quitan a un coach y de las más fáciles de 
   recomendación es prescribir por **RPE objetivo o duración** en los segmentos (ambos ya
   soportados por `workout-structure.ts`). Se prefirió eso a dar un número que se ve preciso y
   no lo es.
+- **Se insertan solos en la sesión.** Una calculadora que obliga a copiar números a mano no
+  ahorra trabajo. Al asignar o editar un entrenamiento, cada segmento ofrece los cinco ritmos
+  como botones. Aparecen solo cuando hay **un** atleta conocido: una plantilla es de todo el
+  equipo, y en una asignación múltiple ofrecer un ritmo sería prescribirle a todos el del
+  primero.
+- **El atleta también los ve**, en solo lectura, en su dashboard. Saber el ritmo fácil evita el
+  error más común (correr los rodajes demasiado rápido); editar el resultado de carrera sigue
+  siendo exclusivo del coach.
 - **Precisión decreciente en los extremos.** La curva de Daniels se comporta peor en esfuerzos
   de menos de ~3 minutos y por encima del 100% del VDOT; por eso la acción rechaza distancias
   menores a 1500 m y tiempos menores a 3 minutos, y el ritmo de repetición está marcado en el

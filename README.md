@@ -61,6 +61,7 @@ src/middleware.ts               Clerk middleware (protege todas las rutas salvo 
 src/lib/actions/invite.ts       invitar/revocar atleta vía la API de invitaciones de Clerk Organizations
 src/lib/actions/athlete-profile.ts  nota privada del coach + resultado de carrera/VDOT de un atleta
 src/lib/vdot.ts                cálculo de ritmos de entrenamiento (modelo VDOT de Daniels) — solo asfalto/pista, ver nota abajo
+src/components/TrainingPacesList.tsx  los cinco ritmos en modo lectura, compartido entre el perfil que ve el coach y el dashboard del atleta
 src/lib/training-load.ts       carga de entrenamiento por sRPE (RPE × duración), semanal + promedio móvil de 4 semanas
 src/components/TrainingLoadChart.tsx  gráfica de carga (barras + línea de referencia), en dashboard de atleta y perfil que ve el coach
 src/lib/actions/team.ts         marca del equipo (logo + color) — white-label
@@ -92,6 +93,12 @@ una base separada de la de desarrollo).
 publicadas) para derivar los ritmos de fácil / maratón / umbral / intervalo / repetición a partir
 de un resultado de carrera reciente. El coach lo captura en el perfil del atleta y los ritmos se
 recalculan solos.
+
+Los ritmos no se quedan en la pantalla del perfil: al asignar o editar un entrenamiento de ese
+atleta, cada segmento ofrece los cinco como botones para llenar el "ritmo objetivo" sin
+teclearlo. Solo aparecen cuando se conoce a **un** atleta — una plantilla es de todo el equipo, y
+en una asignación múltiple cada quien tiene su propio ritmo. El atleta también los ve (solo
+lectura) en su dashboard.
 
 El modelo asume que el ritmo es una unidad de esfuerzo comparable — eso **se rompe en trail**: el
 desnivel y el terreno técnico cambian el costo energético de forma no lineal, así que un "5:00/km"

@@ -5,6 +5,8 @@ import {
   formatPace,
   parseRaceTime,
   formatRaceTime,
+  formatPaceRange,
+  paceOptions,
 } from "./vdot";
 
 describe("calculateVdot", () => {
@@ -87,6 +89,33 @@ describe("parseRaceTime", () => {
 
   it("rechaza un tiempo de cero", () => {
     expect(parseRaceTime("0:00")).toBeNull();
+  });
+});
+
+describe("formatPaceRange", () => {
+  it("no repite la unidad dos veces", () => {
+    expect(formatPaceRange(356, 425)).toBe("5:56–7:05/km");
+  });
+});
+
+describe("paceOptions", () => {
+  const paces = trainingPaces(calculateVdot(5000, 20 * 60));
+  const options = paceOptions(paces);
+
+  it("devuelve los cinco ritmos, de más lento a más rápido", () => {
+    expect(options.map((o) => o.key)).toEqual([
+      "easy",
+      "marathon",
+      "threshold",
+      "interval",
+      "repetition",
+    ]);
+  });
+
+  it("el valor va listo para pegarse en el campo de ritmo objetivo", () => {
+    expect(options.find((o) => o.key === "marathon")?.value).toBe(formatPace(paces.marathon));
+    expect(options.find((o) => o.key === "easy")?.value).toContain("–");
+    expect(options.every((o) => o.value.endsWith("/km"))).toBe(true);
   });
 });
 

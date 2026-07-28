@@ -8,6 +8,8 @@ import { toLocalCalendarDate, todayAsUtcMidnight, toQueryBoundary } from "@/lib/
 import { assertAthleteTeamAccess } from "@/lib/subscription-gate";
 import { getWeeklyLoadSeries } from "@/lib/training-load";
 import { TrainingLoadChart } from "@/components/TrainingLoadChart";
+import { TrainingPacesList } from "@/components/TrainingPacesList";
+import { trainingPaces } from "@/lib/vdot";
 
 export default async function AthleteDashboardPage() {
   const membership = await getCurrentMembership();
@@ -16,7 +18,7 @@ export default async function AthleteDashboardPage() {
 
   const { start, end } = getCurrentWeekRange();
 
-  const [weekWorkouts, nextWorkout, loadSeries] = await Promise.all([
+  const [weekWorkouts, nextWorkout, loadSeries, profile] = await Promise.all([
     prisma.scheduledWorkout.findMany({
       where: {
         athleteMembershipId: membership.id,
@@ -33,10 +35,17 @@ export default async function AthleteDashboardPage() {
       orderBy: { date: "asc" },
     }),
     getWeeklyLoadSeries(membership.id),
+    // Solo lectura: el resultado de carrera del que salen estos ritmos lo
+    // captura el coach, no el atleta.
+    prisma.athleteProfile.findUnique({
+      where: { membershipId: membership.id },
+      select: { vdot: true },
+    }),
   ]);
 
   const completed = weekWorkouts.filter((w) => w.status === "COMPLETED");
   const totalKm = completed.reduce((sum, w) => sum + (w.completion?.distanceKm ?? 0), 0);
+  const paces = profile?.vdot == null ? null : trainingPaces(profile.vdot);
 
   return (
     <div className="flex flex-col gap-8">
@@ -64,6 +73,18 @@ export default async function AthleteDashboardPage() {
             {format(toLocalCalendarDate(nextWorkout.date), "EEEE d MMMM", { locale: es })}
           </p>
         </Link>
+      )}
+
+      {paces && (
+        <div className="rounded-xl border border-zinc-200 p-4">
+          <h2 className="mb-1 font-medium">Tus ritmos de entrenamiento</h2>
+          <p className="mb-4 text-xs text-zinc-500">
+            Calculados por tu entrenador a partir de un resultado de carrera reciente. El más
+            importante es el fácil: la mayoría de los rodajes deberían ir ahí, y correrlos más
+            rápido de la cuenta es el error más común.
+          </p>
+          <TrainingPacesList paces={paces} />
+        </div>
       )}
 
       <div className="rounded-xl border border-zinc-200 p-4">

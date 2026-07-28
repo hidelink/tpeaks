@@ -1,6 +1,7 @@
 "use client";
 
 import type { WorkoutSegment } from "@/lib/workout-structure";
+import { paceOptions, type TrainingPaces } from "@/lib/vdot";
 
 /**
  * Editor controlado de segmentos (calentamiento, series, enfriamiento...).
@@ -20,10 +21,20 @@ const fieldLabelClass = "flex flex-col gap-1 text-xs text-zinc-500";
 export function SegmentEditor({
   segments,
   onChange,
+  paces,
 }: {
   segments: WorkoutSegment[];
   onChange: (segments: WorkoutSegment[]) => void;
+  /**
+   * Ritmos calculados del atleta (ver src/lib/vdot.ts). Cuando existen, cada
+   * segmento ofrece botones para insertarlos en vez de teclearlos a mano.
+   * Solo aplica cuando se conoce a un único atleta: una plantilla es de todo
+   * el equipo, y en una asignación múltiple cada quien tiene su propio ritmo.
+   */
+  paces?: TrainingPaces | null;
 }) {
+  const options = paces ? paceOptions(paces) : null;
+
   function updateSegment(index: number, patch: Partial<WorkoutSegment>) {
     onChange(segments.map((s, i) => (i === index ? { ...s, ...patch } : s)));
   }
@@ -112,6 +123,24 @@ export function SegmentEditor({
               />
             </label>
           </div>
+
+          {options && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-xs text-zinc-500">Ritmos del atleta:</span>
+              {options.map((o) => (
+                <button
+                  key={o.key}
+                  type="button"
+                  onClick={() => updateSegment(i, { targetPace: o.value })}
+                  title={`${o.label}: ${o.value}`}
+                  className="rounded-full border border-zinc-300 px-2.5 py-0.5 text-xs hover:bg-zinc-50"
+                >
+                  {o.label}{" "}
+                  <span className="text-zinc-500 tabular-nums">{o.value}</span>
+                </button>
+              ))}
+            </div>
+          )}
 
           <label className={fieldLabelClass}>
             Nota (opcional)

@@ -15,7 +15,7 @@ export default async function NewScheduledWorkoutPage({
   const [athletes, templates] = await Promise.all([
     prisma.teamMembership.findMany({
       where: { teamId: membership.teamId, role: "ATHLETE", status: "ACTIVE" },
-      include: { user: true },
+      include: { user: true, athleteProfile: true },
       orderBy: { createdAt: "desc" },
     }),
     prisma.workoutTemplate.findMany({
@@ -33,7 +33,11 @@ export default async function NewScheduledWorkoutPage({
         </p>
       ) : (
         <ScheduleForm
-          athletes={athletes.map((a) => ({ id: a.id, name: a.user.name }))}
+          athletes={athletes.map((a) => ({
+            id: a.id,
+            name: a.user.name,
+            vdot: a.athleteProfile?.vdot ?? null,
+          }))}
           templates={templates.map((t) => ({ id: t.id, title: t.title }))}
           defaultDate={date ?? format(new Date(), "yyyy-MM-dd")}
           defaultAthleteId={athleteId}

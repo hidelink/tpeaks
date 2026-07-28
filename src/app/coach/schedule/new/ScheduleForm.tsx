@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { SegmentEditor } from "@/components/SegmentEditor";
 import { scheduleWorkoutToMany } from "@/lib/actions/schedule";
 import type { WorkoutSegment } from "@/lib/workout-structure";
+import { trainingPaces } from "@/lib/vdot";
 
 export function ScheduleForm({
   athletes,
@@ -12,7 +13,7 @@ export function ScheduleForm({
   defaultDate,
   defaultAthleteId,
 }: {
-  athletes: { id: string; name: string }[];
+  athletes: { id: string; name: string; vdot: number | null }[];
   templates: { id: string; title: string }[];
   defaultDate: string;
   defaultAthleteId?: string;
@@ -29,6 +30,15 @@ export function ScheduleForm({
   const [title, setTitle] = useState("");
   const [coachNote, setCoachNote] = useState("");
   const [segments, setSegments] = useState<WorkoutSegment[]>([{ label: "", repeat: 1 }]);
+
+  // Los ritmos son de una persona: solo tienen sentido si hay exactamente un
+  // atleta seleccionado. Con varios, cada quien tiene el suyo y ofrecer uno
+  // sería prescribirle a todos el del primero.
+  const selectedAthlete =
+    athleteMembershipIds.length === 1
+      ? athletes.find((a) => a.id === athleteMembershipIds[0])
+      : undefined;
+  const paces = selectedAthlete?.vdot != null ? trainingPaces(selectedAthlete.vdot) : null;
 
   function toggleAthlete(id: string) {
     setAthleteMembershipIds((prev) =>
@@ -151,7 +161,14 @@ export function ScheduleForm({
               setSegments(segs);
               setError(null);
             }}
+            paces={paces}
           />
+          {athleteMembershipIds.length > 1 && (
+            <p className="mt-2 text-xs text-zinc-500">
+              Los ritmos calculados no se ofrecen al asignar a varios atletas a la vez — cada
+              quien tiene el suyo. Asigna de uno en uno si quieres ritmos personalizados.
+            </p>
+          )}
         </div>
       )}
 

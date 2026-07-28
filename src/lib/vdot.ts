@@ -119,6 +119,28 @@ export function parseRaceTime(input: string): number | null {
   return seconds > 0 ? seconds : null;
 }
 
+/** Un rango como "5:56–7:05/km" — sin repetir "/km" dos veces. */
+export function formatPaceRange(fastSecPerKm: number, slowSecPerKm: number): string {
+  return `${formatPace(fastSecPerKm).replace("/km", "")}–${formatPace(slowSecPerKm)}`;
+}
+
+export type PaceOption = { key: keyof TrainingPaces; label: string; value: string };
+
+/**
+ * Los cinco ritmos listos para insertarse en el campo "ritmo objetivo" de un
+ * segmento. El orden es de más lento a más rápido, que es como los piensa un
+ * coach al armar una sesión.
+ */
+export function paceOptions(paces: TrainingPaces): PaceOption[] {
+  return [
+    { key: "easy", label: "Fácil", value: formatPaceRange(paces.easy.fastSecPerKm, paces.easy.slowSecPerKm) },
+    { key: "marathon", label: "Maratón", value: formatPace(paces.marathon) },
+    { key: "threshold", label: "Umbral", value: formatPace(paces.threshold) },
+    { key: "interval", label: "Intervalo", value: formatPace(paces.interval) },
+    { key: "repetition", label: "Repetición", value: formatPace(paces.repetition) },
+  ];
+}
+
 /** Inversa de parseRaceTime: "1:32:40" para ≥1h, "42:15" si no. */
 export function formatRaceTime(totalSeconds: number): string {
   const hours = Math.floor(totalSeconds / 3600);

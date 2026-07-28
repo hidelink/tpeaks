@@ -6,7 +6,8 @@ import {
   updateAthleteRaceResult,
   clearAthleteRaceResult,
 } from "@/lib/actions/athlete-profile";
-import { parseRaceTime, formatRaceTime, formatPace, type TrainingPaces } from "@/lib/vdot";
+import { parseRaceTime, formatRaceTime, type TrainingPaces } from "@/lib/vdot";
+import { TrainingPacesList } from "@/components/TrainingPacesList";
 
 /**
  * Distancias más comunes. "Otra" deja escribir metros a mano — hay carreras
@@ -174,33 +175,14 @@ export function TrainingPacesCard({
             )}
           </p>
 
-          <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-3">
-            <PaceRow
-              label="Fácil / rodaje"
-              value={`${formatPace(paces.easy.fastSecPerKm)} – ${formatPace(paces.easy.slowSecPerKm)}`}
-            />
-            <PaceRow label="Maratón" value={formatPace(paces.marathon)} />
-            <PaceRow label="Umbral" value={formatPace(paces.threshold)} />
-            <PaceRow label="Intervalo" value={formatPace(paces.interval)} />
-            <PaceRow label="Repetición" value={formatPace(paces.repetition)} />
-          </dl>
+          <TrainingPacesList paces={paces} />
 
-          <p className="mt-4 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900">
-            Estos ritmos solo aplican en plano — pista, asfalto, terreno estable. En trail el
-            desnivel y el terreno cambian el costo del mismo esfuerzo, así que ahí conviene
-            prescribir por RPE o por duración en vez de por ritmo.
+          <p className="mt-3 text-xs text-zinc-500">
+            Al asignar o editar un entrenamiento de este atleta, estos ritmos aparecen como
+            botones en cada segmento — no hace falta teclearlos.
           </p>
         </div>
       )}
-    </div>
-  );
-}
-
-function PaceRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <dt className="text-xs text-zinc-500">{label}</dt>
-      <dd className="font-medium tabular-nums">{value}</dd>
     </div>
   );
 }
