@@ -59,7 +59,8 @@ src/components/TemplateForm.tsx   formulario compartido entre crear y editar una
 src/components/CalendarFilterBar.tsx  filtro por atleta (coach) + búsqueda por título, form GET nativo
 src/middleware.ts               Clerk middleware (protege todas las rutas salvo /sign-in, /sign-up, webhooks)
 src/lib/actions/invite.ts       invitar/revocar atleta vía la API de invitaciones de Clerk Organizations
-src/lib/actions/athlete-profile.ts  nota privada del coach sobre un atleta
+src/lib/actions/athlete-profile.ts  nota privada del coach + resultado de carrera/VDOT de un atleta
+src/lib/vdot.ts                cálculo de ritmos de entrenamiento (modelo VDOT de Daniels) — solo asfalto/pista, ver nota abajo
 src/lib/training-load.ts       carga de entrenamiento por sRPE (RPE × duración), semanal + promedio móvil de 4 semanas
 src/components/TrainingLoadChart.tsx  gráfica de carga (barras + línea de referencia), en dashboard de atleta y perfil que ve el coach
 src/lib/actions/team.ts         marca del equipo (logo + color) — white-label
@@ -74,11 +75,31 @@ src/app/api/webhooks/clerk/     sincroniza User/Team/TeamMembership desde Clerk
 
 ## Estado actual (MVP Fase 1, en construcción)
 
-Ya funciona (una vez conectada la base de datos y Clerk): auth + creación de equipo vía Clerk Organizations (con onboarding para crear el equipo si el usuario no tiene uno todavía), invitar/revocar atletas por email (invitación real de Clerk Organizations, ya no un placeholder), sincronización de usuarios/equipos por webhook o al vuelo si el webhook no está configurado, dashboard de coach y atleta con las 4 métricas, calendario **semanal y mensual** navegable (anterior/siguiente/hoy) con filtro por atleta y búsqueda por título, creación/edición/borrado de plantillas de entrenamiento con editor de segmentos, **asignación de un entrenamiento a uno o varios atletas a la vez** (checklist con "seleccionar todos" — el caso real de un coach con equipo, no uno-por-uno), edición de un entrenamiento ya asignado (incluye "moverlo" cambiando la fecha), duplicar/copiar un entrenamiento a otra fecha o a otro atleta, detalle de entrenamiento con feedback manual del atleta y comentarios del coach, perfil de atleta con historial + nota privada del coach editable, una gráfica de **carga de entrenamiento** (sRPE semanal + promedio móvil de 4 semanas) en el dashboard del atleta y en el perfil que ve el coach, **white-label activado** (logo + color de acento configurables en Ajustes, aplicados en runtime en toda la plataforma), un **rol de admin de plataforma** (`/admin`, ve todos los equipos para soporte interno — se activa a mano con `scripts/make-admin.ts`, no hay auto-registro), y páginas públicas de **Términos de servicio / Aviso de privacidad**.
+Ya funciona (una vez conectada la base de datos y Clerk): auth + creación de equipo vía Clerk Organizations (con onboarding para crear el equipo si el usuario no tiene uno todavía), invitar/revocar atletas por email (invitación real de Clerk Organizations, ya no un placeholder), sincronización de usuarios/equipos por webhook o al vuelo si el webhook no está configurado, dashboard de coach y atleta con las 4 métricas, calendario **semanal y mensual** navegable (anterior/siguiente/hoy) con filtro por atleta y búsqueda por título, creación/edición/borrado de plantillas de entrenamiento con editor de segmentos, **asignación de un entrenamiento a uno o varios atletas a la vez** (checklist con "seleccionar todos" — el caso real de un coach con equipo, no uno-por-uno), edición de un entrenamiento ya asignado (incluye "moverlo" cambiando la fecha), duplicar/copiar un entrenamiento a otra fecha o a otro atleta, detalle de entrenamiento con feedback manual del atleta y comentarios del coach, perfil de atleta con historial + nota privada del coach editable, **cálculo automático de ritmos de entrenamiento** a partir de un resultado de carrera reciente (modelo VDOT, ver nota abajo), una gráfica de **carga de entrenamiento** (sRPE semanal + promedio móvil de 4 semanas) en el dashboard del atleta y en el perfil que ve el coach, **white-label activado** (logo + color de acento configurables en Ajustes, aplicados en runtime en toda la plataforma), un **rol de admin de plataforma** (`/admin`, ve todos los equipos para soporte interno — se activa a mano con `scripts/make-admin.ts`, no hay auto-registro), y páginas públicas de **Términos de servicio / Aviso de privacidad**.
 
 Pendiente (ver Paso 8 del spec, "Nice to have"): drag-and-drop real en el calendario (mover/duplicar hoy se hacen desde botones explícitos, no arrastrando); notificaciones in-app de comentarios nuevos.
 
-No construido todavía (a propósito, ver Paso 2 del spec): cobros reales con Stripe. Tampoco desplegado — todo esto sigue corriendo en local (`npm run dev`) con llaves de Clerk de desarrollo; falta Vercel + Clerk de producción + Supabase de producción antes de que esto sea alcanzable por alguien que no seas tú.
+No construido todavía (a propósito, ver Paso 2 del spec): cobros reales con Stripe.
+
+Desplegado en <https://tpeaks.vercel.app> — pero con llaves de Clerk **de desarrollo** y la misma
+base de Supabase que usa el entorno local. Sirve para enseñárselo a alguien; no es todavía un
+entorno de producción de verdad (falta instancia de Clerk de producción con dominio propio, y
+una base separada de la de desarrollo).
+
+### Nota: los ritmos calculados solo aplican en plano
+
+`src/lib/vdot.ts` implementa el modelo VDOT de Jack Daniels (ecuaciones Daniels-Gilbert,
+publicadas) para derivar los ritmos de fácil / maratón / umbral / intervalo / repetición a partir
+de un resultado de carrera reciente. El coach lo captura en el perfil del atleta y los ritmos se
+recalculan solos.
+
+El modelo asume que el ritmo es una unidad de esfuerzo comparable — eso **se rompe en trail**: el
+desnivel y el terreno técnico cambian el costo energético de forma no lineal, así que un "5:00/km"
+no significa lo mismo cuesta arriba que en pista. Por eso los ritmos se presentan explícitamente
+como de asfalto/pista, y para trail la recomendación es prescribir por RPE objetivo o por duración
+en los segmentos (ambos ya soportados por `src/lib/workout-structure.ts`). La alternativa real
+(grade-adjusted pace) necesita datos de desnivel que hoy no tenemos — llegarían con las
+integraciones de Fase 3.
 
 ### Nota: páginas legales son un borrador
 

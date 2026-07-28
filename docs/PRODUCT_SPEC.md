@@ -480,7 +480,35 @@ cross-team ni impersonar usuarios; ambos quedan como siguiente escalón si hace 
 - [x] Analítica de tendencia — carga de entrenamiento semanal (sRPE) + promedio móvil de 4 semanas, ver abajo.
 - [x] Admin de plataforma para soporte interno — ver Paso 5.
 - [x] Páginas legales (Términos de servicio / Aviso de privacidad) — borrador honesto sobre qué datos se recolectan, no una revisión legal real. Ver `src/app/terms/` y `src/app/privacy/`.
+- [x] **Cálculo automático de ritmos de entrenamiento** (VDOT) — ver abajo.
 - [ ] **Objetivo de carrera del atleta** (idea de producto, sin construir): un lugar para capturar la carrera meta (nombre, fecha, distancia, desnivel, trail vs. asfalto). Sin esto, el coach no tiene dónde ver "para qué está entrenando" cada atleta, y el entrenamiento debería variar según eso (un trail con desnivel necesita fondos con subida y trabajo de fuerza; un maratón de asfalto necesita más volumen a ritmo objetivo). Candidato natural: campos en `AthleteProfile` (`goalRaceName`, `goalRaceDate`, `goalDistanceMeters`, `goalElevationGainMeters`, `goalTerrain: ROAD | TRAIL`), visibles en el perfil que ve el coach. Demostrado por ahora solo con datos de prueba (`scripts/seed-marathon-training.ts`), no con un campo real en el modelo.
+
+### Cálculo automático de ritmos (VDOT)
+
+Salió de la comparación con V.O2 (vdoto2.com): prescribir ritmos a mano, atleta por atleta,
+es de las tareas que más tiempo le quitan a un coach y de las más fáciles de automatizar bien.
+
+- **Modelo: VDOT de Jack Daniels** (ecuaciones Daniels-Gilbert). Son fórmulas publicadas, no
+  código propietario; están implementadas desde cero en `src/lib/vdot.ts` con tests que usan
+  valores de referencia calculados, no memorizados.
+- **Entrada: un resultado de carrera reciente** (distancia + tiempo), capturado por el coach en
+  el perfil del atleta. De ahí salen los cinco ritmos: fácil (rango), maratón, umbral,
+  intervalo, repetición.
+- **El VDOT se persiste** en `AthleteProfile` (`raceResultDistanceMeters`,
+  `raceResultTimeSeconds`, `vdot`) en vez de calcularse al vuelo, para que quede registro de con
+  qué números se prescribió, aunque después se cambie la fórmula.
+- **Limitado a asfalto/pista, a propósito.** El modelo asume que el ritmo es una unidad de
+  esfuerzo comparable, y eso no se sostiene en trail: el desnivel y el terreno técnico cambian
+  el costo energético de forma no lineal. La alternativa honesta (grade-adjusted pace) necesita
+  datos de desnivel que hoy no existen en el modelo — llegarían con las integraciones de Fase 3.
+  Mientras tanto, la UI dice explícitamente que estos ritmos son de plano, y para trail la
+  recomendación es prescribir por **RPE objetivo o duración** en los segmentos (ambos ya
+  soportados por `workout-structure.ts`). Se prefirió eso a dar un número que se ve preciso y
+  no lo es.
+- **Precisión decreciente en los extremos.** La curva de Daniels se comporta peor en esfuerzos
+  de menos de ~3 minutos y por encima del 100% del VDOT; por eso la acción rechaza distancias
+  menores a 1500 m y tiempos menores a 3 minutos, y el ritmo de repetición está marcado en el
+  código como el menos confiable de los cinco.
 
 ### Carga de entrenamiento (sRPE)
 

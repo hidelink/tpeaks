@@ -115,7 +115,15 @@ model AthleteProfile {
   sex              String?
   // Notas privadas del coach: nunca se exponen al atleta en ninguna pantalla/API.
   coachPrivateNote String?
-  createdAt        DateTime  @default(now())
+
+  // Ritmos de entrenamiento (ver src/lib/vdot.ts) — calculados a partir de un
+  // resultado de carrera reciente. Solo tiene sentido en carreras planas
+  // (pista/asfalto); no aplica a trail (desnivel/terreno rompen el modelo).
+  raceResultDistanceMeters Float?
+  raceResultTimeSeconds    Int?
+  vdot                     Float?
+
+  createdAt DateTime @default(now())
 
   membership TeamMembership @relation(fields: [membershipId], references: [id])
 }

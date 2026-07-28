@@ -7,7 +7,9 @@ import { getCurrentMembership } from "@/lib/permissions";
 import { getWeeklyLoadSeries } from "@/lib/training-load";
 import { TrainingLoadChart } from "@/components/TrainingLoadChart";
 import { toLocalCalendarDate } from "@/lib/calendar-date";
+import { trainingPaces } from "@/lib/vdot";
 import { PrivateNoteForm } from "./PrivateNoteForm";
+import { TrainingPacesCard } from "./TrainingPacesCard";
 
 export default async function AthleteProfilePage({
   params,
@@ -37,6 +39,8 @@ export default async function AthleteProfilePage({
     getWeeklyLoadSeries(athlete.id, 8),
   ]);
 
+  const vdot = athlete.athleteProfile?.vdot ?? null;
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -47,6 +51,14 @@ export default async function AthleteProfilePage({
       <PrivateNoteForm
         athleteMembershipId={athlete.id}
         initialNote={athlete.athleteProfile?.coachPrivateNote ?? ""}
+      />
+
+      <TrainingPacesCard
+        athleteMembershipId={athlete.id}
+        raceDistanceMeters={athlete.athleteProfile?.raceResultDistanceMeters ?? null}
+        raceTimeSeconds={athlete.athleteProfile?.raceResultTimeSeconds ?? null}
+        vdot={vdot}
+        paces={vdot === null ? null : trainingPaces(vdot)}
       />
 
       <div className="rounded-xl border border-zinc-200 p-4">
