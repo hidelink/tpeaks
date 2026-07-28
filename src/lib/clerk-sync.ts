@@ -8,17 +8,17 @@ import type { MembershipRole } from "@/generated/prisma/client";
  * fuente de verdad real para permisos de la app es TeamMembership.role, no
  * Clerk (ver docs/PRODUCT_SPEC.md, Paso 3).
  *
- * `org:admin` mapea a OWNER porque quien crea la organización en Clerk es
- * quien está dando de alta su club. A partir de ahí los roles se ajustan
+ * `org:admin` de Clerk mapea a nuestro ADMIN de club porque quien crea la
+ * organización está dando de alta su club. A partir de ahí los roles se ajustan
  * dentro de la app (scripts/set-role.ts hoy; pantalla de socios después).
  *
  * Ojo: upsertMembership solo escribe `role` al CREAR, nunca al actualizar. Por
  * eso cambiar este mapeo no reescribe roles ya asignados — si lo cambias a que
- * también actualice, un ADMIN degradado en la app volvería a OWNER en el
+ * también actualice, alguien degradado a COACH en la app volvería a ADMIN en el
  * siguiente login.
  */
 export function mapOrgRole(orgRole: string | null | undefined): MembershipRole {
-  return orgRole === "org:admin" ? "OWNER" : "ATHLETE";
+  return orgRole === "org:admin" ? "ADMIN" : "ATHLETE";
 }
 
 export function upsertTeamFromClerkOrg(orgId: string, name: string, slug?: string | null) {

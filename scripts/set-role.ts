@@ -11,7 +11,7 @@ import { positionalArgs } from "./_guard";
  * tener la pantalla de socios de la Fase 1 sería trabajo tirado.
  *
  * Uso:
- *   npx tsx scripts/set-role.ts email@ejemplo.com OWNER
+ *   npx tsx scripts/set-role.ts email@ejemplo.com ADMIN
  *   npx tsx scripts/set-role.ts email@ejemplo.com COACH "Terra Peak"
  *   npx tsx scripts/set-role.ts                     (lista los roles actuales)
  *

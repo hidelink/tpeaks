@@ -49,7 +49,7 @@ export default async function AthleteProfilePage({
         <p className="text-sm text-zinc-500">{athlete.user.email}</p>
       </div>
 
-      {/* La página la ve quien gestiona socios (incluida Administración), pero
+      {/* La página la ve quien gestiona socios, pero
           las herramientas de prescripción son solo de quien entrena. */}
       {canTrain && (
         <>

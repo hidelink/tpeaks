@@ -44,7 +44,7 @@ Ver el spec completo (producto, arquitectura, esquema de datos, roles, flujos, b
 docs/PRODUCT_SPEC.md          spec de producto + arquitectura + DB + backlog
 vitest.config.ts                config de tests (ver sección "Tests" abajo)
 prisma/schema.prisma           modelo de datos (incluye tablas de Fase 2/3 ya definidas, inactivas)
-src/lib/roles.ts               roles de club (OWNER/ADMIN/COACH/ATHLETE) y qué capacidad tiene cada uno
+src/lib/roles.ts               roles de club (ADMIN/COACH/ATHLETE) y qué capacidad tiene cada uno
 src/lib/permissions.ts         getCurrentMembership / requireCapability — única fuente de verdad de permisos
 scripts/_guard.ts              seguro de los scripts que borran datos (exige --force y dice a qué base apunta)
 scripts/set-role.ts            cambia el rol de alguien en su club (sin argumentos, lista los actuales)
@@ -76,14 +76,14 @@ src/lib/team-theme.ts          --team-accent como CSS var, aplicada en cada layo
 src/app/coach/                  rutas y layout del coach
 src/app/athlete/                rutas y layout del atleta
 src/app/workout/[id]/           detalle de entrenamiento compartido (render condicional por rol), con su propio layout + edición + duplicar
-src/app/admin/                  admin de plataforma (soporte interno) — lista de equipos + detalle, ver requirePlatformAdmin
+src/app/admin/                  SOPORTE de plataforma (interno) — lista de clubes + detalle, ver requirePlatformAdmin. Distinto del rol ADMIN de club
 src/app/terms/, src/app/privacy/  páginas legales públicas (borrador, ver nota abajo)
 src/app/api/webhooks/clerk/     sincroniza User/Team/TeamMembership desde Clerk
 ```
 
 ## Estado actual (MVP Fase 1, en construcción)
 
-Ya funciona (una vez conectada la base de datos y Clerk): auth + creación de equipo vía Clerk Organizations (con onboarding para crear el equipo si el usuario no tiene uno todavía), invitar/revocar atletas por email (invitación real de Clerk Organizations, ya no un placeholder), sincronización de usuarios/equipos por webhook o al vuelo si el webhook no está configurado, dashboard de coach y atleta con las 4 métricas, calendario **semanal y mensual** navegable (anterior/siguiente/hoy) con filtro por atleta y búsqueda por título, creación/edición/borrado de plantillas de entrenamiento con editor de segmentos, **asignación de un entrenamiento a uno o varios atletas a la vez** (checklist con "seleccionar todos" — el caso real de un coach con equipo, no uno-por-uno), edición de un entrenamiento ya asignado (incluye "moverlo" cambiando la fecha), duplicar/copiar un entrenamiento a otra fecha o a otro atleta, detalle de entrenamiento con feedback manual del atleta y comentarios del coach, perfil de atleta con historial + nota privada del coach editable, **cálculo automático de ritmos de entrenamiento** a partir de un resultado de carrera reciente (modelo VDOT, ver nota abajo), una gráfica de **carga de entrenamiento** (sRPE semanal + promedio móvil de 4 semanas) en el dashboard del atleta y en el perfil que ve el coach, **white-label activado** (logo + color de acento configurables en Ajustes, aplicados en runtime en toda la plataforma), **roles de club** (dueño / administración / coach / socio, con permisos por capacidad), un **rol de admin de plataforma** (`/admin`, ve todos los equipos para soporte interno — se activa a mano con `scripts/make-admin.ts`, no hay auto-registro), y páginas públicas de **Términos de servicio / Aviso de privacidad**.
+Ya funciona (una vez conectada la base de datos y Clerk): auth + creación de equipo vía Clerk Organizations (con onboarding para crear el equipo si el usuario no tiene uno todavía), invitar/revocar atletas por email (invitación real de Clerk Organizations, ya no un placeholder), sincronización de usuarios/equipos por webhook o al vuelo si el webhook no está configurado, dashboard de coach y atleta con las 4 métricas, calendario **semanal y mensual** navegable (anterior/siguiente/hoy) con filtro por atleta y búsqueda por título, creación/edición/borrado de plantillas de entrenamiento con editor de segmentos, **asignación de un entrenamiento a uno o varios atletas a la vez** (checklist con "seleccionar todos" — el caso real de un coach con equipo, no uno-por-uno), edición de un entrenamiento ya asignado (incluye "moverlo" cambiando la fecha), duplicar/copiar un entrenamiento a otra fecha o a otro atleta, detalle de entrenamiento con feedback manual del atleta y comentarios del coach, perfil de atleta con historial + nota privada del coach editable, **cálculo automático de ritmos de entrenamiento** a partir de un resultado de carrera reciente (modelo VDOT, ver nota abajo), una gráfica de **carga de entrenamiento** (sRPE semanal + promedio móvil de 4 semanas) en el dashboard del atleta y en el perfil que ve el coach, **white-label activado** (logo + color de acento configurables en Ajustes, aplicados en runtime en toda la plataforma), **roles de club** (admin / coach / socio, con permisos por capacidad), un **acceso de soporte de plataforma** (`/admin`, ve todos los clubes — se activa a mano con `scripts/make-admin.ts`, no hay auto-registro), y páginas públicas de **Términos de servicio / Aviso de privacidad**.
 
 Pendiente (ver Paso 8 del spec, "Nice to have"): drag-and-drop real en el calendario (mover/duplicar hoy se hacen desde botones explícitos, no arrastrando); notificaciones in-app de comentarios nuevos.
 
@@ -96,38 +96,48 @@ una base separada de la de desarrollo).
 
 ### Roles de club y capacidades
 
-Un club tiene cuatro roles: **Dueño** (`OWNER`), **Administración** (`ADMIN`), **Coach** y
-**Socio** (`ATHLETE`). Los permisos **no** se checan comparando el rol, sino contra capacidades
-(`src/lib/roles.ts`):
+Un club tiene tres roles: **Admin**, **Coach** y **Socio** (`ATHLETE`). Los permisos **no** se
+checan comparando el rol, sino contra capacidades (`src/lib/roles.ts`):
 
 | | Entrenamiento | Socios | Ajustes del club | Registrar lo propio |
 |---|---|---|---|---|
-| Dueño | sí | sí | sí | — |
-| Administración | — | sí | sí | — |
+| Admin | sí | sí | sí | — |
 | Coach | sí | sí | — | — |
 | Socio | — | — | — | sí |
 
-La razón de la indirección es concreta: cuando solo existían `COACH` y `ATHLETE`, cada Server
-Action hacía `requireRole("COACH")`. Al agregar `OWNER`, todas esas comparaciones habrían dejado
-al dueño del club fuera de su propia plataforma, y ningún test lo habría atrapado — solo se vería
-al iniciar sesión como dueño. Hay un test que fija exactamente ese caso.
+**Admin es la unión de todo lo que un club puede hacer, a propósito.** El caso que manda es el club
+de una persona que administra y entrena: necesita un rol que alcance para todo, no varios que haya
+que combinar. Coach existe para el coach contratado, que no debe poder cambiar la marca del club ni,
+más adelante, ver los cobros.
 
-**Limitación conocida:** el rol es un solo valor, así que no se puede expresar "dueño que además
-entrena como socio", común en clubes chicos. El cambio será pasar `role` a una lista; las
-capacidades ya están listas porque nada compara el rol directamente.
+**No se modela "Admin que además es socio".** Quien administre un club y quiera entrenar en él como
+socio usa otra cuenta. Con un solo valor la exclusión la garantiza el motor de datos; con una lista
+de roles habría que validarla a mano en cada escritura, y un `["ADMIN","ATHLETE"]` colado dejaría a
+esa persona calificando para dos layouts a la vez.
+
+⚠️ **"Admin" de club ≠ "Soporte" de plataforma.** El rol `ADMIN` de arriba vive en
+`TeamMembership` y solo manda dentro de su club. El acceso de soporte interno (`/admin`, que ve
+todos los clubes) vive en `User.isPlatformAdmin`, se muestra como **Soporte** en la interfaz y se
+activa con `scripts/make-admin.ts`.
+
+La razón de la indirección es concreta: cuando solo existían `COACH` y `ATHLETE`, cada Server
+Action hacía `requireRole("COACH")`. Al agregar un rol por encima de Coach, todas esas
+comparaciones habrían dejado a esa persona fuera de su propia plataforma, y ningún test lo habría
+atrapado — solo se vería al iniciar sesión con ese rol. Hay un test que fija exactamente ese caso.
+La misma indirección permitió después fusionar dos roles en uno sin auditar ninguna acción.
 
 Las tres capas se aplican juntas, y solo una es seguridad:
 
 1. **Navegación** — `navLinksFor(role)` esconde las pestañas que el rol no puede usar. Un
-   Administración no ve "Plantillas"; un coach no ve "Ajustes".
+   un coach no ve "Ajustes".
 2. **Página** — `requirePageCapability` redirige a `/coach` a quien llegue por URL o link viejo.
 3. **Server Action** — `requireCapability` lanza `ForbiddenError`. **Esta es la única que es
    seguridad**; las otras dos existen para no mostrar un formulario que va a fallar al guardar.
 
-En Clerk, quien crea la organización queda como `OWNER`. Después se ajusta con:
+En Clerk, quien crea la organización queda como `ADMIN` de su club. Después se ajusta con:
 
 ```bash
-npx tsx scripts/set-role.ts email@ejemplo.com ADMIN
+npx tsx scripts/set-role.ts email@ejemplo.com COACH
 ```
 
 Sin argumentos lista los roles actuales. Los roles se ven en **Socios y staff**.
@@ -317,7 +327,7 @@ npx tsx scripts/seed-test-workouts.ts [email-del-atleta]
 # default: member@yopmail.com
 ```
 
-## Admin de plataforma
+## Soporte de plataforma
 
 No hay UI de auto-registro para el rol de admin (`/admin`) — son muy pocas personas las que
 lo necesitan. Para dárselo a un usuario que ya exista:

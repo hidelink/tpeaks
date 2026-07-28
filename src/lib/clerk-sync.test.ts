@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import { mapOrgRole } from "./clerk-sync";
 
 describe("mapOrgRole", () => {
-  it("org:admin se mapea a OWNER: quien crea la organización está dando de alta su club", () => {
-    expect(mapOrgRole("org:admin")).toBe("OWNER");
+  it("org:admin se mapea a ADMIN de club: quien crea la organización está dando de alta su club", () => {
+    expect(mapOrgRole("org:admin")).toBe("ADMIN");
   });
 
   it("org:member se mapea a ATHLETE", () => {

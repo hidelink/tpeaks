@@ -127,25 +127,18 @@ describe("requireCapability", () => {
     return membership;
   }
 
-  it("el dueño del club puede prescribir entrenamiento", async () => {
-    const membership = signedInAs("OWNER");
+  it("el admin del club puede prescribir entrenamiento", async () => {
+    const membership = signedInAs("ADMIN");
     await expect(requireCapability("MANAGE_TRAINING")).resolves.toBe(membership);
   });
 
-  // Es exactamente el bug que se habría colado al agregar OWNER si los guards
-  // hubieran seguido comparando el rol contra "COACH": el dueño del club sin
-  // acceso a su propia plataforma.
-  it("un dueño NO queda fuera de las acciones que antes exigían rol COACH exacto", async () => {
-    signedInAs("OWNER");
+  // Es exactamente el bug que se habría colado al agregar un rol por encima de
+  // COACH si los guards hubieran seguido comparando el rol contra "COACH": el
+  // admin del club sin acceso a su propia plataforma.
+  it("un admin NO queda fuera de las acciones que antes exigían rol COACH exacto", async () => {
+    signedInAs("ADMIN");
     await expect(requireRole("COACH")).rejects.toThrow(ForbiddenError);
     await expect(requireCapability("MANAGE_TRAINING")).resolves.toBeTruthy();
-  });
-
-  it("administración gestiona socios y ajustes, pero no prescribe entrenamiento", async () => {
-    signedInAs("ADMIN");
-    await expect(requireCapability("MANAGE_MEMBERS")).resolves.toBeTruthy();
-    await expect(requireCapability("MANAGE_CLUB")).resolves.toBeTruthy();
-    await expect(requireCapability("MANAGE_TRAINING")).rejects.toThrow(ForbiddenError);
   });
 
   it("un coach no toca los ajustes del club", async () => {

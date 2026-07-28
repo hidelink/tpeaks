@@ -11,16 +11,17 @@ const ALL_CAPABILITIES: Capability[] = [
 ];
 
 describe("can", () => {
-  it("el dueño puede todo lo del club: entrenar, socios y ajustes", () => {
-    expect(can("OWNER", "MANAGE_TRAINING")).toBe(true);
-    expect(can("OWNER", "MANAGE_MEMBERS")).toBe(true);
-    expect(can("OWNER", "MANAGE_CLUB")).toBe(true);
-  });
-
-  it("administración maneja socios y ajustes, pero no prescribe entrenamientos", () => {
+  it("un admin puede todo lo del club: entrenar, socios y ajustes", () => {
+    expect(can("ADMIN", "MANAGE_TRAINING")).toBe(true);
     expect(can("ADMIN", "MANAGE_MEMBERS")).toBe(true);
     expect(can("ADMIN", "MANAGE_CLUB")).toBe(true);
-    expect(can("ADMIN", "MANAGE_TRAINING")).toBe(false);
+  });
+
+  // El caso que define el modelo: un club de una persona necesita UN rol que
+  // alcance para todo, no tres que haya que combinar.
+  it("un solo admin cubre el club de una persona sin combinar roles", () => {
+    const todo = ALL_CAPABILITIES.filter((c) => c !== "LOG_OWN_TRAINING");
+    for (const c of todo) expect(can("ADMIN", c), c).toBe(true);
   });
 
   it("un coach entrena e invita a sus atletas, pero no toca los ajustes del club", () => {
@@ -37,8 +38,8 @@ describe("can", () => {
   });
 
   it("nadie del staff registra entrenamiento propio: el rol es de un solo valor", () => {
-    // Limitación documentada en roles.ts, no un descuido. Si un dueño quiere
-    // entrenar con su club, hoy necesita otra membresía.
+    // Decisión documentada en roles.ts, no un descuido: quien administre un
+    // club y quiera entrenar en él como socio usa otra cuenta.
     for (const role of STAFF_ROLES) {
       expect(can(role, "LOG_OWN_TRAINING")).toBe(false);
     }
@@ -54,7 +55,6 @@ describe("can", () => {
 
 describe("isStaff", () => {
   it("distingue a quien trabaja en el club de los socios", () => {
-    expect(isStaff("OWNER")).toBe(true);
     expect(isStaff("ADMIN")).toBe(true);
     expect(isStaff("COACH")).toBe(true);
     expect(isStaff("ATHLETE")).toBe(false);

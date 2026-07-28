@@ -490,19 +490,30 @@ cross-team ni impersonar usuarios; ambos quedan como siguiente escalón si hace 
 El producto pasa de "herramienta para un coach independiente" a "plataforma para running clubs con
 cobro integrado". Esta fase es plomería para que las siguientes se puedan construir.
 
-- **`MembershipRole` pasa de 2 a 4 valores**: `OWNER`, `ADMIN`, `COACH`, `ATHLETE`. Un club tiene
-  quien lo administra sin entrenar a nadie, y un dueño que responde por el negocio.
+- **`MembershipRole` pasa de 2 a 3 valores**: `ADMIN`, `COACH`, `ATHLETE`. Se intentó primero con
+  cuatro (`OWNER` y `ADMIN` separados), y se fusionaron al comprobar algo medible: la unión de las
+  capacidades de dueño + administración + coach es **idéntica** a la de dueño solo. Separar
+  "dueño" de "administración" agregaba vocabulario sin agregar capacidades, y el caso que manda es
+  el club de una persona que administra y entrena. `ADMIN` quedó como la unión de todo lo del club;
+  `COACH` existe para el coach contratado, que no debe tocar la marca ni, después, los cobros.
 - **Los permisos se checan por CAPACIDAD, no por rol** (`src/lib/roles.ts`). Esto es lo importante
-  de la fase, no el enum: cada Server Action hacía `requireRole("COACH")`, así que agregar `OWNER`
-  habría dejado al dueño del club fuera de su propia plataforma. Un bug que ningún test existente
-  detectaba, visible solo al iniciar sesión como dueño. Ahora agregar un rol es editar una tabla,
-  y hay un test que fija exactamente ese escenario.
-- **`org:admin` de Clerk mapea a `OWNER`**: quien crea la organización está dando de alta su club.
+  de la fase, no el enum: cada Server Action hacía `requireRole("COACH")`, así que agregar un rol
+  por encima de coach habría dejado a esa persona fuera de su propia plataforma. Un bug que ningún
+  test existente detectaba, visible solo al iniciar sesión con ese rol. Ahora agregar un rol es
+  editar una tabla, y hay un test que fija ese escenario. La misma indirección permitió después
+  fusionar `OWNER` en `ADMIN` sin auditar ninguna acción: solo cambió la tabla y la migración.
+- **`org:admin` de Clerk mapea a `ADMIN` de club**: quien crea la organización está dando de alta su club.
   El mapeo solo aplica al crear la membresía, nunca al actualizar — si no, un `ADMIN` degradado en
-  la app volvería a `OWNER` en el siguiente login.
-- **Limitación aceptada:** el rol es un solo valor, así que no se modela "dueño que además entrena
-  como socio", común en clubes chicos. Cuando haga falta, `role` pasa a lista; las capacidades ya
-  están listas porque nada compara el rol directamente.
+  la app volvería a `ADMIN` en el siguiente login.
+- **Decisión explícita, no limitación:** no se modela "admin que además es socio". Quien administre
+  un club y quiera entrenar en él usa otra cuenta. Con un solo valor la exclusión la garantiza el
+  motor de datos; con una lista de roles habría que validarla a mano en cada camino de escritura, y
+  un `["ADMIN","ATHLETE"]` colado dejaría a esa persona calificando para dos layouts, aterrizando
+  en el que decida el orden de dos `if`. Cambiar una restricción que el motor garantiza por una que
+  debe recordar el programador es un mal trato.
+- **Choque de nombres resuelto:** "admin" pasó a significar dos cosas (rol de club y soporte de
+  plataforma). El soporte interno se renombró a **Soporte** en la interfaz; la ruta sigue siendo
+  `/admin` y el campo sigue siendo `User.isPlatformAdmin`.
 - **Se decidió NO sacar Clerk de modo desarrollo todavía** (era parte de la Fase 0 original). Para
   un demo que maneja una sola persona, el banner es cosmético y el tope de 100 usuarios no aprieta
   — los socios sembrados no consumen usuarios de Clerk. Los dos límites reales que sí obligan a
@@ -517,8 +528,8 @@ cobro integrado". Esta fase es plomería para que las siguientes se puedan const
 
 **Tres capas, y solo una es seguridad.** Al documentar los roles se encontró que ninguna pantalla
 del área de club tenía check propio: solo el layout preguntaba "¿es staff?". Las Server Actions sí
-validaban, así que nadie lograba hacer lo que no debía — pero un Administración podía abrir "Nueva
-plantilla", llenarla y recibir un error al guardar. No era un hueco de seguridad sino de honestidad
+validaban, así que nadie lograba hacer lo que no debía — pero un coach podía abrir Ajustes, cambiar
+el color del club y recibir un error al guardar. No era un hueco de seguridad sino de honestidad
 de la interfaz, y se arregló antes de la Fase 1 porque esa fase agrega más pantallas de club.
 
 1. `navLinksFor(role)` esconde las pestañas que el rol no puede usar.

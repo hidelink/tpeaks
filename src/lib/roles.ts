@@ -5,16 +5,22 @@ import type { MembershipRole } from "@/generated/prisma/enums";
  *
  * Los permisos se checan contra CAPACIDADES, no comparando el rol. La razón es
  * concreta: cuando este proyecto solo tenía COACH y ATHLETE, cada Server Action
- * hacía `requireRole("COACH")`. Al agregar OWNER, todas esas comparaciones
- * habrían dejado al dueño del club fuera de su propia plataforma, y el error no
- * lo habría atrapado ningún test — solo aparecería al iniciar sesión como
- * dueño. Con capacidades, agregar un rol es editar la tabla de abajo.
+ * hacía `requireRole("COACH")`. Al agregar un rol con más permisos, todas esas
+ * comparaciones habrían dejado a esa persona fuera de su propia plataforma, y
+ * el error no lo habría atrapado ningún test — solo aparecería al iniciar
+ * sesión con ese rol. Con capacidades, agregar un rol es editar la tabla de
+ * abajo. Lo mismo permitió fusionar OWNER en ADMIN sin auditar nada.
  *
- * LIMITACIÓN CONOCIDA: el rol es un solo valor, así que no se puede expresar
- * "dueño del club que además entrena como atleta", que en clubes chicos es
- * común (el fundador suele correr con su propio grupo). Cuando haga falta, el
- * cambio es pasar `role` a una lista o a una tabla aparte; las capacidades ya
- * están listas para recibirlo porque nada compara el rol directamente.
+ * ADMIN es la unión de todo lo que un club puede hacer, a propósito: el caso
+ * que manda es el club de una persona que administra y entrena. Separar "dueño"
+ * de "administración" agregaba vocabulario sin agregar capacidades.
+ *
+ * DECISIÓN: no se modela "ADMIN que además es socio". Quien administre un club
+ * y quiera entrenar en él como socio usa otra cuenta. Es explícito, no un
+ * descuido: con un solo valor la exclusión la garantiza el motor de datos; con
+ * una lista de roles habría que validarla a mano en cada escritura, y si se
+ * cuela un ["ADMIN","ATHLETE"] la persona califica para dos layouts y aterriza
+ * en el que decida el orden de dos ifs.
  */
 export type Capability =
   /** Crear plantillas, asignar y editar entrenamientos, comentar. */
@@ -27,11 +33,10 @@ export type Capability =
   | "LOG_OWN_TRAINING";
 
 const CAPABILITIES: Record<MembershipRole, readonly Capability[]> = {
-  OWNER: ["MANAGE_TRAINING", "MANAGE_MEMBERS", "MANAGE_CLUB"],
-  // Administración sin entrenar: puede dar de alta socios y tocar ajustes,
-  // pero no prescribe entrenamientos.
-  ADMIN: ["MANAGE_MEMBERS", "MANAGE_CLUB"],
-  // Un coach invita a sus propios atletas, pero no toca los ajustes del club.
+  // Todo lo del club. En un club de una persona, el único rol necesario.
+  ADMIN: ["MANAGE_TRAINING", "MANAGE_MEMBERS", "MANAGE_CLUB"],
+  // Un coach invita a sus propios atletas, pero no toca los ajustes del club:
+  // un coach contratado no debería poder cambiar la marca ni, después, los cobros.
   COACH: ["MANAGE_TRAINING", "MANAGE_MEMBERS"],
   ATHLETE: ["LOG_OWN_TRAINING"],
 };
@@ -50,11 +55,10 @@ export function isStaff(role: MembershipRole): boolean {
 }
 
 export const ROLE_LABELS: Record<MembershipRole, string> = {
-  OWNER: "Dueño",
-  ADMIN: "Administración",
+  ADMIN: "Admin",
   COACH: "Coach",
   ATHLETE: "Socio",
 };
 
 /** Orden de presentación: de más autoridad a menos. */
-export const STAFF_ROLES: readonly MembershipRole[] = ["OWNER", "ADMIN", "COACH"];
+export const STAFF_ROLES: readonly MembershipRole[] = ["ADMIN", "COACH"];

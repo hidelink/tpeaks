@@ -3,7 +3,9 @@ import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 /**
- * Marca (o desmarca) a un usuario existente como admin de plataforma.
+ * Marca (o desmarca) a un usuario existente como SOPORTE de plataforma.
+ * No confundir con el rol ADMIN de club (src/lib/roles.ts): esto da acceso a
+ * /admin, que ve todos los clubes, y vive en User.isPlatformAdmin.
  * No hay UI para esto a propósito — son muy pocas personas las que
  * necesitan este acceso (ver src/lib/permissions.ts, requirePlatformAdmin).
  *
@@ -32,7 +34,7 @@ async function main() {
     data: { isPlatformAdmin: !revoke },
   });
 
-  console.log(`${email} ahora ${revoke ? "NO es" : "es"} admin de plataforma.`);
+  console.log(`${email} ahora ${revoke ? "NO tiene" : "tiene"} acceso de soporte de plataforma.`);
 }
 
 main()
