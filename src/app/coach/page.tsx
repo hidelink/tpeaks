@@ -11,6 +11,7 @@ import {
   pickInactiveAthletes,
   loadByAthlete,
   daysSinceLastActivity,
+  type AthleteLoad,
 } from "@/lib/coach-dashboard";
 
 /** Cuántos días sin registrar nada antes de que un atleta salga en la lista de pendientes. */
@@ -205,7 +206,11 @@ export default async function CoachDashboardPage() {
             {athletes.map((a) => {
               const own = scheduledThisWeek.filter((w) => w.athleteMembershipId === a.id);
               const ownCompliance = weeklyCompliance(own, today);
-              const load = loads.get(a.id) ?? { thisWeek: 0, lastWeek: 0 };
+              const load = loads.get(a.id) ?? {
+                thisWeek: 0,
+                lastWeekToDate: 0,
+                lastWeekTotal: 0,
+              };
               const days = daysSinceLastActivity(lastCompletedById.get(a.id) ?? null, today);
 
               return (
@@ -232,9 +237,9 @@ export default async function CoachDashboardPage() {
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs text-zinc-500">Carga vs. semana pasada</p>
+                      <p className="text-xs text-zinc-500">Carga vs. mismo punto</p>
                       <p className="font-medium tabular-nums">
-                        {load.thisWeek} <LoadDelta thisWeek={load.thisWeek} lastWeek={load.lastWeek} />
+                        {load.thisWeek} <LoadDelta load={load} />
                       </p>
                     </div>
                   </div>
@@ -288,15 +293,19 @@ function AttentionRow({
 }
 
 /**
- * Comparación de carga contra la semana pasada. La semana en curso va a medias,
- * así que un "-40%" del martes no significa nada — por eso es un dato de
- * contexto en gris y no una alerta.
+ * Comparación contra la MISMA porción de la semana pasada, no contra la semana
+ * pasada completa — comparar un lunes contra siete días siempre da un desplome
+ * que no significa nada (ver loadByAthlete). Sigue siendo un dato de contexto
+ * en gris: con pocos días transcurridos, una sola sesión mueve mucho el número.
  */
-function LoadDelta({ thisWeek, lastWeek }: { thisWeek: number; lastWeek: number }) {
-  if (lastWeek === 0) return null;
-  const delta = Math.round(((thisWeek - lastWeek) / lastWeek) * 100);
+function LoadDelta({ load }: { load: AthleteLoad }) {
+  if (load.lastWeekToDate === 0) return null;
+  const delta = Math.round(((load.thisWeek - load.lastWeekToDate) / load.lastWeekToDate) * 100);
   return (
-    <span className="text-xs font-normal text-zinc-500">
+    <span
+      className="text-xs font-normal text-zinc-500"
+      title={`${load.thisWeek} contra ${load.lastWeekToDate} al mismo punto de la semana pasada (${load.lastWeekTotal} en la semana completa)`}
+    >
       ({delta >= 0 ? "+" : ""}
       {delta}%)
     </span>

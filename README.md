@@ -101,6 +101,13 @@ Ahora se calcula solo sobre lo vencido, **excluyendo hoy** (la sesión de hoy to
 hacer en la tarde), y muestra "—" cuando nada ha vencido en vez de un 0% falso. Ver
 `weeklyCompliance` en `src/lib/coach-dashboard.ts`, con tests que encodifican el caso real.
 
+La comparación de carga del dashboard tenía el mismo defecto: medía la semana en curso contra la
+semana pasada **completa**. Un lunes con 184 de carga contra 2698 daba −93%, cuando contra el
+mismo lunes de la semana anterior (120) el atleta iba **+53%, subiendo**. Ahora se compara contra
+la misma porción de la semana pasada (`loadByAthlete`). Si vas a agregar otra métrica comparativa,
+haz explícito sobre qué ventana está medida cada lado — es el mismo error tres veces en este
+proyecto.
+
 ### Nota: multideporte es una etiqueta, no un modelo por deporte
 
 Un entrenamiento tiene un **tipo** (`sport`): correr, trail, bici, natación, fuerza, movilidad u

@@ -74,30 +74,55 @@ export type LoadRow = {
   durationMinutes: number | null;
 };
 
+export type AthleteLoad = {
+  /** Carga acumulada de esta semana hasta hoy. */
+  thisWeek: number;
+  /** La misma porción de la semana pasada — el único término comparable. */
+  lastWeekToDate: number;
+  /** La semana pasada completa, como contexto de a dónde va la actual. */
+  lastWeekTotal: number;
+};
+
 /**
- * Carga sRPE de esta semana y de la anterior, por atleta — la misma métrica
- * de la gráfica (RPE × minutos), agrupada en memoria a partir de una sola
- * query en vez de una por atleta.
+ * Carga sRPE por atleta — la misma métrica de la gráfica (RPE × minutos),
+ * agrupada en memoria a partir de una sola query en vez de una por atleta.
+ *
+ * La comparación se hace contra la MISMA porción de la semana pasada, no
+ * contra la semana pasada completa. Comparar un lunes contra siete días
+ * siempre da un desplome enorme: en datos reales, un atleta que iba 184 contra
+ * 120 en el mismo punto (+53%, subiendo carga) se mostraba como −93% contra el
+ * total de 2698. No era impreciso, apuntaba al lado contrario.
+ *
+ * Hoy sí cuenta de los dos lados: la sesión de hoy ya hecha es carga real, y
+ * se compara contra ese mismo día de la semana pasada.
  */
-export function loadByAthlete(
-  rows: LoadRow[],
-  today: Date,
-): Map<string, { thisWeek: number; lastWeek: number }> {
-  const thisWeekStart = startOfWeek(today, { weekStartsOn: 1 }).getTime();
-  const lastWeekStart = startOfWeek(subWeeks(today, 1), { weekStartsOn: 1 }).getTime();
-  const result = new Map<string, { thisWeek: number; lastWeek: number }>();
+export function loadByAthlete(rows: LoadRow[], today: Date): Map<string, AthleteLoad> {
+  const thisWeekStart = startOfWeek(today, { weekStartsOn: 1 });
+  const lastWeekStart = startOfWeek(subWeeks(today, 1), { weekStartsOn: 1 });
+  const elapsedDays = differenceInCalendarDays(startOfDay(today), thisWeekStart);
+  const result = new Map<string, AthleteLoad>();
 
   for (const row of rows) {
-    const weekStart = startOfWeek(toLocalCalendarDate(row.date), { weekStartsOn: 1 }).getTime();
+    const date = toLocalCalendarDate(row.date);
+    const weekStart = startOfWeek(date, { weekStartsOn: 1 });
+    const isThisWeek = weekStart.getTime() === thisWeekStart.getTime();
+    const isLastWeek = weekStart.getTime() === lastWeekStart.getTime();
     // Cualquier otra semana se ignora: la comparación es esta contra la
     // anterior, no "todo lo viejo" contra esta.
-    if (weekStart !== thisWeekStart && weekStart !== lastWeekStart) continue;
+    if (!isThisWeek && !isLastWeek) continue;
 
-    const bucket = result.get(row.athleteMembershipId) ?? { thisWeek: 0, lastWeek: 0 };
+    const bucket =
+      result.get(row.athleteMembershipId) ?? { thisWeek: 0, lastWeekToDate: 0, lastWeekTotal: 0 };
     const load = (row.rpe ?? 0) * (row.durationMinutes ?? 0);
 
-    if (weekStart === thisWeekStart) bucket.thisWeek += load;
-    else bucket.lastWeek += load;
+    if (isThisWeek) {
+      bucket.thisWeek += load;
+    } else {
+      bucket.lastWeekTotal += load;
+      if (differenceInCalendarDays(date, lastWeekStart) <= elapsedDays) {
+        bucket.lastWeekToDate += load;
+      }
+    }
 
     result.set(row.athleteMembershipId, bucket);
   }

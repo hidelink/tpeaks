@@ -501,8 +501,17 @@ app por la mañana. Nadie entra a ver métricas; entra a saber de qué ocuparse.
   registrar nada en 10 días — incluidos los que nunca registraron uno, que es el caso más fácil de
   que se te pierda un atleta recién invitado. Cada renglón es un enlace directo.
 - **La lista de atletas dice algo.** Cumplimiento propio, hace cuánto registró algo por última vez,
-  y la carga de esta semana contra la anterior. La comparación de carga va en gris a propósito: la
-  semana en curso va a medias, así que un "−40%" del martes no es una alerta.
+  y la carga de esta semana contra la anterior.
+- **La comparación de carga se rompió por el mismo motivo que el cumplimiento**, y se descubrió
+  mirando la pantalla ya desplegada. Comparaba la semana en curso contra la semana pasada
+  **completa**: un lunes con 184 de carga contra 2698 mostraba −93%, cuando contra el mismo lunes
+  de la semana anterior (120) el atleta iba **+53%, subiendo**. No era impreciso, apuntaba al lado
+  contrario. Ahora se compara contra la misma porción de la semana pasada. Sigue en gris: con
+  pocos días transcurridos una sola sesión mueve mucho el porcentaje.
+- **Patrón, no coincidencia.** Van tres defectos de la misma familia (los dos de zona horaria, y
+  estos dos de período parcial vs. completo). El denominador común es comparar dos magnitudes sin
+  hacer explícito sobre qué ventana está medida cada una. Vale la pena buscarlo a propósito en la
+  próxima revisión en vez de esperar a que aparezca.
 - **La lógica vive en `src/lib/coach-dashboard.ts`, pura y testeada**; las queries se quedan en la
   página. La carga del equipo sale de una sola query agrupada en memoria, no de una por atleta.
 

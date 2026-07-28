@@ -134,11 +134,48 @@ describe("loadByAthlete", () => {
     const result = loadByAthlete(
       [
         { athleteMembershipId: "a", date: dbDate("2026-07-27"), rpe: 5, durationMinutes: 60 },
-        { athleteMembershipId: "a", date: dbDate("2026-07-22"), rpe: 7, durationMinutes: 30 },
+        { athleteMembershipId: "a", date: dbDate("2026-07-21"), rpe: 7, durationMinutes: 30 },
       ],
       today,
     );
-    expect(result.get("a")).toEqual({ thisWeek: 300, lastWeek: 210 });
+    expect(result.get("a")).toEqual({ thisWeek: 300, lastWeekToDate: 210, lastWeekTotal: 210 });
+  });
+
+  // El caso real que destapó el error: un lunes, el atleta llevaba 184 de
+  // carga contra 120 en el mismo punto de la semana pasada (iba subiendo),
+  // pero la semana pasada completa fueron 2698 — comparar contra ese total
+  // mostraba −93%, apuntando al lado contrario.
+  it("compara contra la misma porción de la semana pasada, no contra la semana completa", () => {
+    const lunes = localNoon("2026-07-27");
+    const result = loadByAthlete(
+      [
+        { athleteMembershipId: "a", date: dbDate("2026-07-27"), rpe: 4, durationMinutes: 46 }, // 184
+        { athleteMembershipId: "a", date: dbDate("2026-07-20"), rpe: 4, durationMinutes: 30 }, // 120, lunes pasado
+        { athleteMembershipId: "a", date: dbDate("2026-07-23"), rpe: 8, durationMinutes: 120 }, // jueves pasado
+        { athleteMembershipId: "a", date: dbDate("2026-07-26"), rpe: 6, durationMinutes: 270 }, // domingo pasado
+      ],
+      lunes,
+    );
+
+    const load = result.get("a")!;
+    expect(load.thisWeek).toBe(184);
+    expect(load.lastWeekToDate).toBe(120);
+    expect(load.lastWeekTotal).toBe(2700);
+    // Lo que ve el coach: subiendo, no desplomándose.
+    expect(load.thisWeek).toBeGreaterThan(load.lastWeekToDate);
+  });
+
+  it("al cerrar la semana, la porción comparable es la semana pasada entera", () => {
+    const domingo = localNoon("2026-08-02");
+    const result = loadByAthlete(
+      [
+        { athleteMembershipId: "a", date: dbDate("2026-07-20"), rpe: 4, durationMinutes: 30 },
+        { athleteMembershipId: "a", date: dbDate("2026-07-26"), rpe: 6, durationMinutes: 100 },
+      ],
+      domingo,
+    );
+    const load = result.get("a")!;
+    expect(load.lastWeekToDate).toBe(load.lastWeekTotal);
   });
 
   it("suma varias sesiones de la misma semana", () => {
