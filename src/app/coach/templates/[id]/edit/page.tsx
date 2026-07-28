@@ -26,6 +26,7 @@ export default async function EditTemplatePage({
         initial={{
           title: template.title,
           description: template.description ?? undefined,
+          sport: template.sport,
           tags: template.tags,
           structure: parseWorkoutStructure(template.structure),
         }}

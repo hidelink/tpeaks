@@ -10,6 +10,7 @@ import { getWeeklyLoadSeries } from "@/lib/training-load";
 import { TrainingLoadChart } from "@/components/TrainingLoadChart";
 import { TrainingPacesList } from "@/components/TrainingPacesList";
 import { trainingPaces } from "@/lib/vdot";
+import { RUNNING_KM_SPORTS } from "@/lib/sports";
 
 export default async function AthleteDashboardPage() {
   const membership = await getCurrentMembership();
@@ -44,7 +45,11 @@ export default async function AthleteDashboardPage() {
   ]);
 
   const completed = weekWorkouts.filter((w) => w.status === "COMPLETED");
-  const totalKm = completed.reduce((sum, w) => sum + (w.completion?.distanceKm ?? 0), 0);
+  // Ver el comentario equivalente en el dashboard del coach: los km de bici
+  // no son comparables con los de correr, así que la métrica es solo de correr.
+  const runningKm = completed
+    .filter((w) => RUNNING_KM_SPORTS.includes(w.sport))
+    .reduce((sum, w) => sum + (w.completion?.distanceKm ?? 0), 0);
   const paces = profile?.vdot == null ? null : trainingPaces(profile.vdot);
 
   return (
@@ -57,8 +62,8 @@ export default async function AthleteDashboardPage() {
           <p className="text-2xl font-semibold">{completed.length}/{weekWorkouts.length}</p>
         </div>
         <div className="rounded-xl border border-zinc-200 p-4">
-          <p className="text-sm text-zinc-500">Km semanales</p>
-          <p className="text-2xl font-semibold">{totalKm.toFixed(1)}</p>
+          <p className="text-sm text-zinc-500">Km corriendo</p>
+          <p className="text-2xl font-semibold">{runningKm.toFixed(1)}</p>
         </div>
       </div>
 

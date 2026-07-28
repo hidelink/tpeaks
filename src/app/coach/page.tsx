@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentMembership } from "@/lib/permissions";
 import { getCurrentWeekRange } from "@/lib/dates";
 import { toQueryBoundary } from "@/lib/calendar-date";
+import { RUNNING_KM_SPORTS } from "@/lib/sports";
 
 export default async function CoachDashboardPage() {
   const membership = await getCurrentMembership();
@@ -22,10 +23,13 @@ export default async function CoachDashboardPage() {
   ]);
 
   const completed = scheduledThisWeek.filter((w) => w.status === "COMPLETED");
-  const totalKm = completed.reduce(
-    (sum, w) => sum + (w.completion?.distanceKm ?? 0),
-    0,
-  );
+  // Solo correr y trail: sumar los km de una sesión de bici con los de un
+  // fondo da un número que no significa nada. Las demás sesiones sí cuentan
+  // en el cumplimiento y en la gráfica de carga (RPE × duración es comparable
+  // entre deportes; los kilómetros no).
+  const runningKm = completed
+    .filter((w) => RUNNING_KM_SPORTS.includes(w.sport))
+    .reduce((sum, w) => sum + (w.completion?.distanceKm ?? 0), 0);
   const complianceRate =
     scheduledThisWeek.length === 0
       ? 0
@@ -39,7 +43,7 @@ export default async function CoachDashboardPage() {
         <MetricCard label="Programados (semana)" value={scheduledThisWeek.length} />
         <MetricCard label="Completados (semana)" value={completed.length} />
         <MetricCard label="Cumplimiento semanal" value={`${complianceRate}%`} />
-        <MetricCard label="Km semanales" value={totalKm.toFixed(1)} />
+        <MetricCard label="Km corriendo (semana)" value={runningKm.toFixed(1)} />
       </div>
 
       <div>

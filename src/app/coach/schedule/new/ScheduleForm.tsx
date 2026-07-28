@@ -6,6 +6,9 @@ import { SegmentEditor } from "@/components/SegmentEditor";
 import { scheduleWorkoutToMany } from "@/lib/actions/schedule";
 import type { WorkoutSegment } from "@/lib/workout-structure";
 import { trainingPaces } from "@/lib/vdot";
+import { SportSelect } from "@/components/SportSelect";
+import { sportMeta } from "@/lib/sports";
+import type { WorkoutSport } from "@/generated/prisma/enums";
 
 export function ScheduleForm({
   athletes,
@@ -14,7 +17,7 @@ export function ScheduleForm({
   defaultAthleteId,
 }: {
   athletes: { id: string; name: string; vdot: number | null }[];
-  templates: { id: string; title: string }[];
+  templates: { id: string; title: string; sport: WorkoutSport }[];
   defaultDate: string;
   defaultAthleteId?: string;
 }) {
@@ -27,6 +30,7 @@ export function ScheduleForm({
   );
   const [date, setDate] = useState(defaultDate);
   const [templateId, setTemplateId] = useState<string>("");
+  const [sport, setSport] = useState<WorkoutSport>("RUN");
   const [title, setTitle] = useState("");
   const [coachNote, setCoachNote] = useState("");
   const [segments, setSegments] = useState<WorkoutSegment[]>([{ label: "", repeat: 1 }]);
@@ -39,6 +43,10 @@ export function ScheduleForm({
       ? athletes.find((a) => a.id === athleteMembershipIds[0])
       : undefined;
   const paces = selectedAthlete?.vdot != null ? trainingPaces(selectedAthlete.vdot) : null;
+
+  // Al usar plantilla, el deporte viene de ella (snapshot al asignar) y no se
+  // edita aquí — editar la sesión ya asignada sí lo permite.
+  const selectedTemplate = templates.find((t) => t.id === templateId);
 
   function toggleAthlete(id: string) {
     setAthleteMembershipIds((prev) =>
@@ -57,6 +65,7 @@ export function ScheduleForm({
           title: title || templates.find((t) => t.id === templateId)?.title || "Entrenamiento",
           coachNote: coachNote || undefined,
           templateId: templateId || undefined,
+          sport: templateId ? undefined : sport,
           structure: templateId ? undefined : { segments },
         });
         if (result.ids.length === 1) {
@@ -133,6 +142,15 @@ export function ScheduleForm({
         </select>
       </label>
 
+      {selectedTemplate ? (
+        <p className="text-sm text-zinc-500">
+          Tipo: {sportMeta(selectedTemplate.sport).icon}{" "}
+          {sportMeta(selectedTemplate.sport).label} — lo define la plantilla.
+        </p>
+      ) : (
+        <SportSelect value={sport} onChange={setSport} />
+      )}
+
       <label className="flex flex-col gap-1 text-sm">
         Título
         <input
@@ -162,6 +180,7 @@ export function ScheduleForm({
               setError(null);
             }}
             paces={paces}
+            sport={sport}
           />
           {athleteMembershipIds.length > 1 && (
             <p className="mt-2 text-xs text-zinc-500">

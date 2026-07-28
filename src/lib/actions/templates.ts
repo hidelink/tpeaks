@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole, ForbiddenError } from "@/lib/permissions";
 import { parseWorkoutStructureInput, type WorkoutStructure } from "@/lib/workout-structure";
+import type { WorkoutSport } from "@/generated/prisma/enums";
 
 /**
  * Retorna el id creado en vez de hacer redirect() aquí: esta acción se
@@ -15,6 +16,7 @@ import { parseWorkoutStructureInput, type WorkoutStructure } from "@/lib/workout
 export async function createWorkoutTemplate(input: {
   title: string;
   description?: string;
+  sport: WorkoutSport;
   tags: string[];
   structure: WorkoutStructure;
 }) {
@@ -27,6 +29,7 @@ export async function createWorkoutTemplate(input: {
       createdById: membership.userId,
       title: input.title,
       description: input.description || undefined,
+      sport: input.sport,
       tags: input.tags,
       structure,
     },
@@ -46,6 +49,7 @@ export async function updateWorkoutTemplate(
   input: {
     title: string;
     description?: string;
+    sport: WorkoutSport;
     tags: string[];
     structure: WorkoutStructure;
   },
@@ -63,6 +67,7 @@ export async function updateWorkoutTemplate(
     data: {
       title: input.title,
       description: input.description || null,
+      sport: input.sport,
       tags: input.tags,
       structure,
     },

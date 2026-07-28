@@ -14,6 +14,7 @@ import { buildCalendarHref, type CalendarView } from "@/lib/calendar-url";
 import { toLocalCalendarDate, toQueryBoundary } from "@/lib/calendar-date";
 import { CalendarFilterBar } from "@/components/CalendarFilterBar";
 import { assertAthleteTeamAccess } from "@/lib/subscription-gate";
+import { sportMeta } from "@/lib/sports";
 
 export default async function AthleteCalendarPage({
   searchParams,
@@ -128,7 +129,9 @@ export default async function AthleteCalendarPage({
                     href={`/workout/${w.id}`}
                     className="rounded-lg bg-zinc-100 px-2 py-1 text-xs"
                   >
-                    <p className="truncate font-medium">{w.title}</p>
+                    <p className="truncate font-medium">
+                      <span aria-hidden>{sportMeta(w.sport).icon}</span> {w.title}
+                    </p>
                     <p className="text-zinc-500">{w.status}</p>
                   </Link>
                 ))}

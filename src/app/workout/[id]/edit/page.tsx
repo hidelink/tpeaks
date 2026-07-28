@@ -35,6 +35,7 @@ export default async function EditScheduledWorkoutPage({
         initial={{
           date: format(toLocalCalendarDate(workout.date), "yyyy-MM-dd"),
           title: workout.title,
+          sport: workout.sport,
           coachNote: workout.coachNote ?? undefined,
           structure: parseWorkoutStructure(workout.structure),
         }}

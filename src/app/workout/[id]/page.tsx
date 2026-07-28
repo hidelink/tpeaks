@@ -9,6 +9,7 @@ import { toLocalCalendarDate } from "@/lib/calendar-date";
 import { CompletionForm } from "./CompletionForm";
 import { CommentForm } from "./CommentForm";
 import { DuplicateWorkoutForm } from "./DuplicateWorkoutForm";
+import { sportMeta } from "@/lib/sports";
 
 const STATUS_STYLES: Record<string, { label: string; className: string }> = {
   PLANNED: { label: "Programado", className: "bg-blue-50 text-blue-700" },
@@ -67,8 +68,11 @@ export default async function WorkoutDetailPage({
     <div className="mx-auto flex max-w-2xl flex-col gap-6 px-6 py-10">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm text-zinc-500 capitalize">
-            {format(localDate, "EEEE d 'de' MMMM", { locale: es })}
+          <p className="text-sm text-zinc-500">
+            <span className="capitalize">
+              {format(localDate, "EEEE d 'de' MMMM", { locale: es })}
+            </span>{" "}
+            · {sportMeta(workout.sport).icon} {sportMeta(workout.sport).label}
           </p>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight">{workout.title}</h1>
           {membership.role === "COACH" && (

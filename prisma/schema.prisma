@@ -31,6 +31,19 @@ enum WorkoutStatus {
   SKIPPED
 }
 
+// Tipo de sesión. La estructura (segmentos con duración/RPE/nota) ya servía
+// para cualquier deporte; esto solo decide qué campos tienen sentido enseñar
+// y qué cuenta como kilometraje de carrera. Ver src/lib/sports.ts.
+enum WorkoutSport {
+  RUN
+  TRAIL_RUN
+  BIKE
+  SWIM
+  STRENGTH
+  MOBILITY
+  OTHER
+}
+
 enum SubscriptionStatus {
   TRIALING
   ACTIVE
@@ -129,16 +142,17 @@ model AthleteProfile {
 }
 
 model WorkoutTemplate {
-  id          String   @id @default(cuid())
+  id          String       @id @default(cuid())
   teamId      String
   createdById String
   title       String
   description String?
+  sport       WorkoutSport @default(RUN)
   // Ver el contrato Zod en src/lib/workout-structure.ts — no es un blob libre.
   structure   Json
   tags        String[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   team      Team               @relation(fields: [teamId], references: [id])
   scheduled ScheduledWorkout[]
@@ -154,6 +168,9 @@ model ScheduledWorkout {
   // cuando coach y atleta están en zonas horarias distintas.
   date                DateTime      @db.Date
   title               String
+  // Snapshot igual que structure: cambiar el deporte de la plantilla no debe
+  // reescribir lo ya asignado.
+  sport               WorkoutSport  @default(RUN)
   // Snapshot copiado de WorkoutTemplate.structure al momento de asignar.
   // Editar la plantilla después NO debe alterar esto retroactivamente.
   structure           Json

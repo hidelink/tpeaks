@@ -3,11 +3,14 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { SegmentEditor } from "@/components/SegmentEditor";
+import { SportSelect } from "@/components/SportSelect";
 import type { WorkoutSegment, WorkoutStructure } from "@/lib/workout-structure";
+import type { WorkoutSport } from "@/generated/prisma/enums";
 
 export type TemplateFormValues = {
   title: string;
   description?: string;
+  sport: WorkoutSport;
   tags: string[];
   structure: WorkoutStructure;
 };
@@ -30,6 +33,7 @@ export function TemplateForm({
   const [isPending, startTransition] = useTransition();
   const [title, setTitle] = useState(initial?.title ?? "");
   const [description, setDescription] = useState(initial?.description ?? "");
+  const [sport, setSport] = useState<WorkoutSport>(initial?.sport ?? "RUN");
   const [tags, setTags] = useState(initial?.tags.join(", ") ?? "");
   const [segments, setSegments] = useState<WorkoutSegment[]>(
     initial?.structure.segments ?? [{ label: "", repeat: 1 }],
@@ -44,6 +48,7 @@ export function TemplateForm({
         await onSubmit({
           title,
           description: description || undefined,
+          sport,
           tags: tags
             .split(",")
             .map((t) => t.trim())
@@ -80,6 +85,8 @@ export function TemplateForm({
         />
       </label>
 
+      <SportSelect value={sport} onChange={setSport} />
+
       <label className="flex flex-col gap-1 text-sm">
         Tags (separados por coma)
         <input
@@ -94,6 +101,7 @@ export function TemplateForm({
         <p className="mb-2 text-sm font-medium">Segmentos</p>
         <SegmentEditor
           segments={segments}
+          sport={sport}
           onChange={(segs) => {
             setSegments(segs);
             setError(null);

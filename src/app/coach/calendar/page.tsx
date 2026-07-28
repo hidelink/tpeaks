@@ -13,6 +13,7 @@ import {
 import { buildCalendarHref, type CalendarView } from "@/lib/calendar-url";
 import { toLocalCalendarDate, toQueryBoundary } from "@/lib/calendar-date";
 import { CalendarFilterBar } from "@/components/CalendarFilterBar";
+import { sportMeta } from "@/lib/sports";
 
 /**
  * Vista semanal o mensual (?view=week|month), con navegación y filtros por
@@ -161,7 +162,9 @@ export default async function CoachCalendarPage({
                     href={`/workout/${w.id}`}
                     className="rounded-lg bg-zinc-100 px-2 py-1 text-xs"
                   >
-                    <p className="truncate font-medium">{w.title}</p>
+                    <p className="truncate font-medium">
+                      <span aria-hidden>{sportMeta(w.sport).icon}</span> {w.title}
+                    </p>
                     <p className="truncate text-zinc-500">{w.athlete.user.name}</p>
                   </Link>
                 ))}

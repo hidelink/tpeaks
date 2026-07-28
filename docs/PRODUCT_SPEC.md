@@ -481,7 +481,37 @@ cross-team ni impersonar usuarios; ambos quedan como siguiente escalón si hace 
 - [x] Admin de plataforma para soporte interno — ver Paso 5.
 - [x] Páginas legales (Términos de servicio / Aviso de privacidad) — borrador honesto sobre qué datos se recolectan, no una revisión legal real. Ver `src/app/terms/` y `src/app/privacy/`.
 - [x] **Cálculo automático de ritmos de entrenamiento** (VDOT) — ver abajo.
+- [x] **Tipo de sesión (multideporte)** — correr, trail, bici, natación, fuerza, movilidad. Ver abajo.
+- [ ] **Campos propios de fuerza** (series/reps/peso en el segmento): hoy se escriben en la etiqueta. Aditivo al contrato Zod cuando el uso real lo pida — ver abajo.
 - [ ] **Objetivo de carrera del atleta** (idea de producto, sin construir): un lugar para capturar la carrera meta (nombre, fecha, distancia, desnivel, trail vs. asfalto). Sin esto, el coach no tiene dónde ver "para qué está entrenando" cada atleta, y el entrenamiento debería variar según eso (un trail con desnivel necesita fondos con subida y trabajo de fuerza; un maratón de asfalto necesita más volumen a ritmo objetivo). Candidato natural: campos en `AthleteProfile` (`goalRaceName`, `goalRaceDate`, `goalDistanceMeters`, `goalElevationGainMeters`, `goalTerrain: ROAD | TRAIL`), visibles en el perfil que ve el coach. Demostrado por ahora solo con datos de prueba (`scripts/seed-marathon-training.ts`), no con un campo real en el modelo.
+
+### Tipo de sesión (multideporte)
+
+Un corredor no solo corre: hace fuerza, movilidad, y a veces bici para sumar volumen sin impacto.
+El diagnóstico al abordarlo fue que el modelo ya era casi multideporte sin proponérselo — un
+segmento con duración, RPE y nota describe una sesión de gimnasio igual de bien que una serie en
+pista, y la carga sRPE (RPE × minutos) es precisamente el método estándar para comparar deportes
+distintos. Lo único genuinamente de correr eran el campo de ritmo y la métrica de kilómetros.
+
+Por eso se eligió la opción mínima: **una etiqueta, no un modelo por deporte.**
+
+- **`sport` en `WorkoutTemplate` y en `ScheduledWorkout`**, con default `RUN`. En el asignado es un
+  snapshot, igual que `structure`: cambiar el deporte de la plantilla no reescribe lo ya asignado.
+- **`src/lib/sports.ts` concentra qué significa cada tipo**: si pide distancia, si pide ritmo, qué
+  ejemplo mostrar en cada campo, si se le pueden sugerir los ritmos del VDOT, y si sus kilómetros
+  cuentan como kilometraje de carrera. Un test compara la lista contra el enum de Prisma, así que
+  agregar un deporte y olvidar la metadata falla en CI en vez de renderizar vacío.
+- **Sin campos por deporte, a propósito.** Series/reps/peso se escriben en la etiqueta del
+  segmento ("Sentadilla 4x8 @ 70 kg"). Se lee bien y no permite graficar progresión de un
+  levantamiento — esa es la limitación conocida. Añadir campos opcionales al contrato Zod después
+  es aditivo y no rompe nada guardado, así que la decisión se pospone hasta que haya uso real que
+  la justifique, en vez de diseñarla en el vacío.
+- **Un campo que no aplica se esconde, pero nunca si ya tiene valor.** Cambiar una sesión de correr
+  a fuerza dejaría una distancia guardada e invisible; en vez de borrarla en silencio, se sigue
+  mostrando y el coach decide.
+- **"Km semanales" pasó a "Km corriendo"** y solo suma correr y trail. Sumar los km de una sesión
+  de bici con los de un fondo produce un número que no significa nada. Los demás deportes siguen
+  contando en cumplimiento y en la gráfica de carga, donde sí son comparables.
 
 ### Cálculo automático de ritmos (VDOT)
 

@@ -60,6 +60,8 @@ src/components/CalendarFilterBar.tsx  filtro por atleta (coach) + búsqueda por 
 src/middleware.ts               Clerk middleware (protege todas las rutas salvo /sign-in, /sign-up, webhooks)
 src/lib/actions/invite.ts       invitar/revocar atleta vía la API de invitaciones de Clerk Organizations
 src/lib/actions/athlete-profile.ts  nota privada del coach + resultado de carrera/VDOT de un atleta
+src/lib/sports.ts              tipos de sesión (correr, trail, bici, natación, fuerza, movilidad) y qué campos aplica cada uno
+src/components/SportSelect.tsx  selector de tipo, compartido por plantillas, asignación y edición
 src/lib/vdot.ts                cálculo de ritmos de entrenamiento (modelo VDOT de Daniels) — solo asfalto/pista, ver nota abajo
 src/components/TrainingPacesList.tsx  los cinco ritmos en modo lectura, compartido entre el perfil que ve el coach y el dashboard del atleta
 src/lib/training-load.ts       carga de entrenamiento por sRPE (RPE × duración), semanal + promedio móvil de 4 semanas
@@ -86,6 +88,27 @@ Desplegado en <https://tpeaks.vercel.app> — pero con llaves de Clerk **de desa
 base de Supabase que usa el entorno local. Sirve para enseñárselo a alguien; no es todavía un
 entorno de producción de verdad (falta instancia de Clerk de producción con dominio propio, y
 una base separada de la de desarrollo).
+
+### Nota: multideporte es una etiqueta, no un modelo por deporte
+
+Un entrenamiento tiene un **tipo** (`sport`): correr, trail, bici, natación, fuerza, movilidad u
+otro. El default es correr, así que en el caso normal nadie lo toca. La estructura de segmentos
+(duración, RPE, nota) siempre sirvió para cualquier deporte; el tipo solo decide qué campos tiene
+sentido enseñar (`src/lib/sports.ts`): fuerza y movilidad no piden distancia ni ritmo, bici y
+natación cambian el ejemplo del campo de ritmo, y las sugerencias de VDOT solo aparecen en correr
+en plano.
+
+Lo que **no** hay, a propósito: campos propios para series/reps/peso. Hoy eso se escribe en la
+etiqueta del segmento ("Sentadilla 4x8 @ 70 kg"), que se lee bien pero no permite graficar la
+progresión de un levantamiento. Es un cambio aditivo al contrato Zod cuando el uso lo pida — ver
+`docs/PRODUCT_SPEC.md`.
+
+Un campo que no aplica al deporte se esconde, **pero nunca si ya tiene valor**: cambiar una sesión
+de correr a fuerza no borra ni oculta en silencio la distancia que ya tenía.
+
+La gráfica de carga (RPE × duración) no cambió: es comparable entre deportes, que es justamente
+para lo que sirve. La métrica de kilómetros sí — ahora dice "Km corriendo" y solo suma correr y
+trail, porque sumar km de bici con km de carrera da un número sin significado.
 
 ### Nota: los ritmos calculados solo aplican en plano
 

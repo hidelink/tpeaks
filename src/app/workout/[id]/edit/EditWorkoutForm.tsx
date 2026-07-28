@@ -6,6 +6,8 @@ import { SegmentEditor } from "@/components/SegmentEditor";
 import { updateScheduledWorkout } from "@/lib/actions/schedule";
 import type { WorkoutSegment, WorkoutStructure } from "@/lib/workout-structure";
 import { trainingPaces } from "@/lib/vdot";
+import { SportSelect } from "@/components/SportSelect";
+import type { WorkoutSport } from "@/generated/prisma/enums";
 
 export function EditWorkoutForm({
   workoutId,
@@ -13,7 +15,13 @@ export function EditWorkoutForm({
   vdot,
 }: {
   workoutId: string;
-  initial: { date: string; title: string; coachNote?: string; structure: WorkoutStructure };
+  initial: {
+    date: string;
+    title: string;
+    sport: WorkoutSport;
+    coachNote?: string;
+    structure: WorkoutStructure;
+  };
   /** VDOT del atleta dueño de este entrenamiento, si el coach ya lo capturó. */
   vdot: number | null;
 }) {
@@ -22,6 +30,7 @@ export function EditWorkoutForm({
   const [isPending, startTransition] = useTransition();
   const [date, setDate] = useState(initial.date);
   const [title, setTitle] = useState(initial.title);
+  const [sport, setSport] = useState<WorkoutSport>(initial.sport);
   const [coachNote, setCoachNote] = useState(initial.coachNote ?? "");
   const [segments, setSegments] = useState<WorkoutSegment[]>(initial.structure.segments);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +43,7 @@ export function EditWorkoutForm({
         await updateScheduledWorkout(workoutId, {
           date,
           title,
+          sport,
           coachNote: coachNote || undefined,
           structure: { segments },
         });
@@ -68,6 +78,8 @@ export function EditWorkoutForm({
         />
       </label>
 
+      <SportSelect value={sport} onChange={setSport} />
+
       <label className="flex flex-col gap-1 text-sm">
         Nota para el atleta (opcional)
         <textarea
@@ -86,6 +98,7 @@ export function EditWorkoutForm({
             setError(null);
           }}
           paces={paces}
+          sport={sport}
         />
       </div>
 

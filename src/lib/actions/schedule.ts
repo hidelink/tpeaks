@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole, ForbiddenError } from "@/lib/permissions";
 import { parseWorkoutStructure, parseWorkoutStructureInput, type WorkoutStructure } from "@/lib/workout-structure";
+import type { WorkoutSport } from "@/generated/prisma/enums";
 
 /**
  * Asigna un entrenamiento (desde plantilla o ad hoc) al calendario de uno o
@@ -24,6 +25,7 @@ export async function scheduleWorkoutToMany(input: {
   title: string;
   coachNote?: string;
   templateId?: string;
+  sport?: WorkoutSport;
   structure?: WorkoutStructure;
 }) {
   const membership = await requireRole("COACH");
@@ -40,14 +42,19 @@ export async function scheduleWorkoutToMany(input: {
   }
 
   let structure: WorkoutStructure;
+  // El deporte, igual que structure, se copia de la plantilla como snapshot:
+  // cambiar la plantilla después no debe reescribir lo ya asignado.
+  let sport: WorkoutSport;
   if (input.templateId) {
     const template = await prisma.workoutTemplate.findFirst({
       where: { id: input.templateId, teamId: membership.teamId },
     });
     if (!template) throw new ForbiddenError("Esa plantilla no es de tu equipo.");
     structure = parseWorkoutStructureInput(template.structure);
+    sport = template.sport;
   } else {
     structure = parseWorkoutStructureInput(input.structure);
+    sport = input.sport ?? "RUN";
   }
 
   const date = new Date(input.date);
@@ -62,6 +69,7 @@ export async function scheduleWorkoutToMany(input: {
           templateId: input.templateId,
           date,
           title: input.title,
+          sport,
           structure,
           coachNote: input.coachNote || undefined,
         },
@@ -84,6 +92,7 @@ export async function updateScheduledWorkout(
   input: {
     date: string; // "yyyy-MM-dd"
     title: string;
+    sport: WorkoutSport;
     coachNote?: string;
     structure: WorkoutStructure;
   },
@@ -102,6 +111,7 @@ export async function updateScheduledWorkout(
     data: {
       date: new Date(input.date),
       title: input.title,
+      sport: input.sport,
       coachNote: input.coachNote || null,
       structure,
     },
@@ -143,6 +153,7 @@ export async function duplicateScheduledWorkout(
       templateId: source.templateId,
       date: new Date(input.date),
       title: source.title,
+      sport: source.sport,
       structure: parseWorkoutStructure(source.structure),
       coachNote: source.coachNote,
     },

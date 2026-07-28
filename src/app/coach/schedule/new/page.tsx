@@ -38,7 +38,7 @@ export default async function NewScheduledWorkoutPage({
             name: a.user.name,
             vdot: a.athleteProfile?.vdot ?? null,
           }))}
-          templates={templates.map((t) => ({ id: t.id, title: t.title }))}
+          templates={templates.map((t) => ({ id: t.id, title: t.title, sport: t.sport }))}
           defaultDate={date ?? format(new Date(), "yyyy-MM-dd")}
           defaultAthleteId={athleteId}
         />

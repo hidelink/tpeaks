@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentMembership } from "@/lib/permissions";
 import { parseWorkoutStructure } from "@/lib/workout-structure";
 import { DeleteTemplateButton } from "./DeleteTemplateButton";
+import { sportMeta } from "@/lib/sports";
 
 export default async function CoachTemplatesPage() {
   const membership = await getCurrentMembership();
@@ -35,7 +36,9 @@ export default async function CoachTemplatesPage() {
             const structure = parseWorkoutStructure(t.structure);
             return (
               <li key={t.id} className="rounded-xl border border-zinc-200 p-4">
-                <p className="font-medium">{t.title}</p>
+                <p className="font-medium">
+                  <span aria-hidden>{sportMeta(t.sport).icon}</span> {t.title}
+                </p>
                 {t.description && (
                   <p className="mt-1 text-sm text-zinc-500">{t.description}</p>
                 )}
