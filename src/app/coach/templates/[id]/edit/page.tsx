@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentMembership } from "@/lib/permissions";
 import { parseWorkoutStructure } from "@/lib/workout-structure";
 import { EditTemplateForm } from "./EditTemplateForm";
+import { can } from "@/lib/roles";
 
 export default async function EditTemplatePage({
   params,
@@ -11,7 +12,7 @@ export default async function EditTemplatePage({
 }) {
   const { id } = await params;
   const membership = await getCurrentMembership();
-  if (!membership || membership.role !== "COACH") notFound();
+  if (!membership || !can(membership.role, "MANAGE_TRAINING")) notFound();
 
   const template = await prisma.workoutTemplate.findFirst({
     where: { id, teamId: membership.teamId },

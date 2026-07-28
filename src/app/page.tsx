@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { getCurrentMembership } from "@/lib/permissions";
+import { isStaff } from "@/lib/roles";
 
 /**
  * Landing mínima: si hay sesión, manda directo al dashboard según rol.
@@ -37,7 +38,7 @@ export default async function Home() {
 
   const membership = await getCurrentMembership();
 
-  if (membership?.role === "COACH") {
+  if (membership && isStaff(membership.role)) {
     redirect("/coach");
   }
   if (membership?.role === "ATHLETE") {

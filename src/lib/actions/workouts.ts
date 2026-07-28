@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireMembership, ForbiddenError } from "@/lib/permissions";
+import { requireCapability, ForbiddenError } from "@/lib/permissions";
 
 /**
  * El atleta marca su propio entrenamiento como completado + feedback manual.
@@ -19,8 +19,7 @@ export async function markWorkoutCompleted(
     athleteComment?: string;
   },
 ) {
-  const membership = await requireMembership();
-  if (membership.role !== "ATHLETE") throw new ForbiddenError();
+  const membership = await requireCapability("LOG_OWN_TRAINING");
 
   const workout = await prisma.scheduledWorkout.findFirst({
     where: { id: scheduledWorkoutId, athleteMembershipId: membership.id },
@@ -47,8 +46,7 @@ export async function markWorkoutCompleted(
  * propio equipo.
  */
 export async function addCoachComment(scheduledWorkoutId: string, comment: string) {
-  const membership = await requireMembership();
-  if (membership.role !== "COACH") throw new ForbiddenError();
+  const membership = await requireCapability("MANAGE_TRAINING");
 
   const workout = await prisma.scheduledWorkout.findFirst({
     where: { id: scheduledWorkoutId, teamId: membership.teamId },

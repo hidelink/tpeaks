@@ -5,6 +5,7 @@ import { getCurrentMembership } from "@/lib/permissions";
 import { parseWorkoutStructure } from "@/lib/workout-structure";
 import { toLocalCalendarDate } from "@/lib/calendar-date";
 import { EditWorkoutForm } from "./EditWorkoutForm";
+import { can } from "@/lib/roles";
 
 export default async function EditScheduledWorkoutPage({
   params,
@@ -13,7 +14,7 @@ export default async function EditScheduledWorkoutPage({
 }) {
   const { id } = await params;
   const membership = await getCurrentMembership();
-  if (!membership || membership.role !== "COACH") notFound();
+  if (!membership || !can(membership.role, "MANAGE_TRAINING")) notFound();
 
   const workout = await prisma.scheduledWorkout.findFirst({
     where: { id, teamId: membership.teamId },

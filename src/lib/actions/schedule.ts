@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireRole, ForbiddenError } from "@/lib/permissions";
+import { requireCapability, ForbiddenError } from "@/lib/permissions";
 import { parseWorkoutStructure, parseWorkoutStructureInput, type WorkoutStructure } from "@/lib/workout-structure";
 import type { WorkoutSport } from "@/generated/prisma/enums";
 
@@ -28,7 +28,7 @@ export async function scheduleWorkoutToMany(input: {
   sport?: WorkoutSport;
   structure?: WorkoutStructure;
 }) {
-  const membership = await requireRole("COACH");
+  const membership = await requireCapability("MANAGE_TRAINING");
 
   if (input.athleteMembershipIds.length === 0) {
     throw new ForbiddenError("Selecciona al menos un atleta.");
@@ -97,7 +97,7 @@ export async function updateScheduledWorkout(
     structure: WorkoutStructure;
   },
 ) {
-  const membership = await requireRole("COACH");
+  const membership = await requireCapability("MANAGE_TRAINING");
 
   const existing = await prisma.scheduledWorkout.findFirst({
     where: { id: scheduledWorkoutId, teamId: membership.teamId },
@@ -132,7 +132,7 @@ export async function duplicateScheduledWorkout(
   sourceId: string,
   input: { date: string; athleteMembershipId?: string },
 ) {
-  const membership = await requireRole("COACH");
+  const membership = await requireCapability("MANAGE_TRAINING");
 
   const source = await prisma.scheduledWorkout.findFirst({
     where: { id: sourceId, teamId: membership.teamId },

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireRole, ForbiddenError } from "@/lib/permissions";
+import { requireCapability, ForbiddenError } from "@/lib/permissions";
 import { calculateVdot } from "@/lib/vdot";
 
 /**
@@ -10,7 +10,7 @@ import { calculateVdot } from "@/lib/vdot";
  * y siempre acotado a su propio equipo, aunque adivine el id de otro.
  */
 async function assertCoachOfAthlete(athleteMembershipId: string) {
-  const membership = await requireRole("COACH");
+  const membership = await requireCapability("MANAGE_TRAINING");
 
   const athlete = await prisma.teamMembership.findFirst({
     where: { id: athleteMembershipId, teamId: membership.teamId, role: "ATHLETE" },

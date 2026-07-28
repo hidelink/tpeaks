@@ -3,6 +3,7 @@ import { getCurrentMembership } from "@/lib/permissions";
 import { AppHeader } from "@/components/AppHeader";
 import { COACH_NAV_LINKS } from "@/lib/nav-links";
 import { teamAccentStyle } from "@/lib/team-theme";
+import { isStaff } from "@/lib/roles";
 
 export default async function CoachLayout({
   children,
@@ -14,7 +15,7 @@ export default async function CoachLayout({
   if (!membership) {
     redirect("/sign-in");
   }
-  if (membership.role !== "COACH") {
+  if (!isStaff(membership.role)) {
     redirect("/athlete");
   }
 

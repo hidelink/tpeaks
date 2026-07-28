@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireRole } from "@/lib/permissions";
+import { requireCapability } from "@/lib/permissions";
 
 /**
  * Marca del equipo (white-label) — logo y color de acento. Se aplican en
@@ -13,7 +13,7 @@ import { requireRole } from "@/lib/permissions";
  * que el white-label funcione.
  */
 export async function updateTeamBranding(input: { logoUrl: string; primaryColor: string }) {
-  const membership = await requireRole("COACH");
+  const membership = await requireCapability("MANAGE_CLUB");
 
   await prisma.team.update({
     where: { id: membership.teamId },

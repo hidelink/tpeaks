@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { syncMembershipFromClerk } from "@/lib/clerk-sync";
+import { can, type Capability } from "@/lib/roles";
 import type { MembershipRole } from "@/generated/prisma/client";
 
 export class ForbiddenError extends Error {
@@ -37,9 +38,26 @@ export async function getCurrentMembership() {
 }
 
 /**
- * Guard para Server Actions / Route Handlers: exige una membresía activa con
- * el rol dado. Nunca confiar solo en ocultar botones en el cliente — esta es
- * la única fuente de verdad de permisos (ver docs/PRODUCT_SPEC.md, Paso 5).
+ * Guard principal para Server Actions / Route Handlers: exige una membresía
+ * activa que pueda hacer algo concreto. Nunca confiar solo en ocultar botones
+ * en el cliente — esta es la única fuente de verdad de permisos (ver
+ * docs/PRODUCT_SPEC.md, Paso 5).
+ *
+ * Se checa contra capacidades y no contra roles a propósito: ver el comentario
+ * de src/lib/roles.ts. Preferir esto sobre requireRole en código nuevo.
+ */
+export async function requireCapability(capability: Capability) {
+  const membership = await getCurrentMembership();
+  if (!membership || !can(membership.role, capability)) {
+    throw new ForbiddenError();
+  }
+  return membership;
+}
+
+/**
+ * Exige un rol exacto. Sirve para los pocos casos donde el rol ES el criterio
+ * y no una capacidad (ej. "solo un socio tiene entrenamientos propios"). Para
+ * autorizar acciones, usa requireCapability.
  */
 export async function requireRole(role: MembershipRole) {
   const membership = await getCurrentMembership();

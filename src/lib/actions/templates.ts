@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireRole, ForbiddenError } from "@/lib/permissions";
+import { requireCapability, ForbiddenError } from "@/lib/permissions";
 import { parseWorkoutStructureInput, type WorkoutStructure } from "@/lib/workout-structure";
 import type { WorkoutSport } from "@/generated/prisma/enums";
 
@@ -20,7 +20,7 @@ export async function createWorkoutTemplate(input: {
   tags: string[];
   structure: WorkoutStructure;
 }) {
-  const membership = await requireRole("COACH");
+  const membership = await requireCapability("MANAGE_TRAINING");
   const structure = parseWorkoutStructureInput(input.structure);
 
   const template = await prisma.workoutTemplate.create({
@@ -54,7 +54,7 @@ export async function updateWorkoutTemplate(
     structure: WorkoutStructure;
   },
 ) {
-  const membership = await requireRole("COACH");
+  const membership = await requireCapability("MANAGE_TRAINING");
   const structure = parseWorkoutStructureInput(input.structure);
 
   const existing = await prisma.workoutTemplate.findFirst({
@@ -84,7 +84,7 @@ export async function updateWorkoutTemplate(
  * sigue existiendo tal cual, solo pierde el vínculo a la plantilla borrada.
  */
 export async function deleteWorkoutTemplate(templateId: string) {
-  const membership = await requireRole("COACH");
+  const membership = await requireCapability("MANAGE_TRAINING");
 
   const existing = await prisma.workoutTemplate.findFirst({
     where: { id: templateId, teamId: membership.teamId },

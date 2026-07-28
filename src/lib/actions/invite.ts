@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { clerkClient } from "@clerk/nextjs/server";
-import { requireRole } from "@/lib/permissions";
+import { requireCapability } from "@/lib/permissions";
 
 /**
  * Invita a un atleta por email a la Organization (Team) del coach. Clerk
@@ -12,7 +12,7 @@ import { requireRole } from "@/lib/permissions";
  * mapeamos a ATHLETE (ver src/lib/clerk-sync.ts).
  */
 export async function inviteAthlete(email: string) {
-  const membership = await requireRole("COACH");
+  const membership = await requireCapability("MANAGE_MEMBERS");
 
   const client = await clerkClient();
   await client.organizations.createOrganizationInvitation({
@@ -26,7 +26,7 @@ export async function inviteAthlete(email: string) {
 }
 
 export async function revokeInvitation(invitationId: string) {
-  const membership = await requireRole("COACH");
+  const membership = await requireCapability("MANAGE_MEMBERS");
 
   const client = await clerkClient();
   await client.organizations.revokeOrganizationInvitation({

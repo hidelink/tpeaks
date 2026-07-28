@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { assertDestructiveAllowed, positionalArgs } from "./_guard";
 import { startOfWeek, addDays } from "date-fns";
 import { toQueryBoundary } from "../src/lib/calendar-date";
 
@@ -20,7 +21,7 @@ import { toQueryBoundary } from "../src/lib/calendar-date";
  * Default: member@yopmail.com
  */
 
-const athleteEmail = process.argv[2] ?? "member@yopmail.com";
+const athleteEmail = positionalArgs()[0] ?? "member@yopmail.com";
 
 // Domingo de la semana de la carrera. Cambia esto si quieres correr la demo
 // en otro momento del ciclo (base/pico/taper) relativo a "hoy".
@@ -164,6 +165,10 @@ const PLAN: PlannedWorkout[] = [
 ];
 
 async function main() {
+  assertDestructiveAllowed(
+    `todos los entrenamientos, feedback y comentarios previos de ${athleteEmail}`,
+  );
+
   const user = await prisma.user.findUnique({ where: { email: athleteEmail } });
   if (!user) throw new Error(`No existe ningún User con email ${athleteEmail}.`);
 

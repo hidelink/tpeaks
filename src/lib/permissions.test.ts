@@ -25,17 +25,19 @@ import { syncMembershipFromClerk } from "@/lib/clerk-sync";
 import {
   getCurrentMembership,
   requireRole,
+  requireCapability,
   requireMembership,
   requirePlatformAdmin,
   ForbiddenError,
 } from "./permissions";
+import type { MembershipRole } from "@/generated/prisma/client";
 
 const authMock = auth as unknown as ReturnType<typeof vi.fn>;
 const findFirstMock = prisma.teamMembership.findFirst as unknown as ReturnType<typeof vi.fn>;
 const findUserMock = prisma.user.findUnique as unknown as ReturnType<typeof vi.fn>;
 const syncMock = syncMembershipFromClerk as unknown as ReturnType<typeof vi.fn>;
 
-const fakeMembership = (role: "COACH" | "ATHLETE") => ({
+const fakeMembership = (role: MembershipRole) => ({
   id: "mem_1",
   teamId: "team_1",
   role,
@@ -114,6 +116,54 @@ describe("requireRole", () => {
     authMock.mockResolvedValue({ userId: null, orgId: null, orgRole: null });
 
     await expect(requireRole("COACH")).rejects.toThrow(ForbiddenError);
+  });
+});
+
+describe("requireCapability", () => {
+  function signedInAs(role: MembershipRole) {
+    authMock.mockResolvedValue({ userId: "user_1", orgId: "org_1", orgRole: "org:admin" });
+    const membership = fakeMembership(role);
+    findFirstMock.mockResolvedValue(membership);
+    return membership;
+  }
+
+  it("el dueño del club puede prescribir entrenamiento", async () => {
+    const membership = signedInAs("OWNER");
+    await expect(requireCapability("MANAGE_TRAINING")).resolves.toBe(membership);
+  });
+
+  // Es exactamente el bug que se habría colado al agregar OWNER si los guards
+  // hubieran seguido comparando el rol contra "COACH": el dueño del club sin
+  // acceso a su propia plataforma.
+  it("un dueño NO queda fuera de las acciones que antes exigían rol COACH exacto", async () => {
+    signedInAs("OWNER");
+    await expect(requireRole("COACH")).rejects.toThrow(ForbiddenError);
+    await expect(requireCapability("MANAGE_TRAINING")).resolves.toBeTruthy();
+  });
+
+  it("administración gestiona socios y ajustes, pero no prescribe entrenamiento", async () => {
+    signedInAs("ADMIN");
+    await expect(requireCapability("MANAGE_MEMBERS")).resolves.toBeTruthy();
+    await expect(requireCapability("MANAGE_CLUB")).resolves.toBeTruthy();
+    await expect(requireCapability("MANAGE_TRAINING")).rejects.toThrow(ForbiddenError);
+  });
+
+  it("un coach no toca los ajustes del club", async () => {
+    signedInAs("COACH");
+    await expect(requireCapability("MANAGE_TRAINING")).resolves.toBeTruthy();
+    await expect(requireCapability("MANAGE_CLUB")).rejects.toThrow(ForbiddenError);
+  });
+
+  it("un socio solo puede registrar su propio entrenamiento", async () => {
+    signedInAs("ATHLETE");
+    await expect(requireCapability("LOG_OWN_TRAINING")).resolves.toBeTruthy();
+    await expect(requireCapability("MANAGE_TRAINING")).rejects.toThrow(ForbiddenError);
+    await expect(requireCapability("MANAGE_MEMBERS")).rejects.toThrow(ForbiddenError);
+  });
+
+  it("lanza ForbiddenError cuando no hay membresía en absoluto", async () => {
+    authMock.mockResolvedValue({ userId: null, orgId: null, orgRole: null });
+    await expect(requireCapability("MANAGE_TRAINING")).rejects.toThrow(ForbiddenError);
   });
 });
 

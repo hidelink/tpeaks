@@ -485,6 +485,40 @@ cross-team ni impersonar usuarios; ambos quedan como siguiente escalón si hace 
 - [ ] **Campos propios de fuerza** (series/reps/peso en el segmento): hoy se escriben en la etiqueta. Aditivo al contrato Zod cuando el uso real lo pida — ver abajo.
 - [ ] **Objetivo de carrera del atleta** (idea de producto, sin construir): un lugar para capturar la carrera meta (nombre, fecha, distancia, desnivel, trail vs. asfalto). Sin esto, el coach no tiene dónde ver "para qué está entrenando" cada atleta, y el entrenamiento debería variar según eso (un trail con desnivel necesita fondos con subida y trabajo de fuerza; un maratón de asfalto necesita más volumen a ritmo objetivo). Candidato natural: campos en `AthleteProfile` (`goalRaceName`, `goalRaceDate`, `goalDistanceMeters`, `goalElevationGainMeters`, `goalTerrain: ROAD | TRAIL`), visibles en el perfil que ve el coach. Demostrado por ahora solo con datos de prueba (`scripts/seed-marathon-training.ts`), no con un campo real en el modelo.
 
+### Fase 0 del pivote a clubes: roles y capacidades
+
+El producto pasa de "herramienta para un coach independiente" a "plataforma para running clubs con
+cobro integrado". Esta fase es plomería para que las siguientes se puedan construir.
+
+- **`MembershipRole` pasa de 2 a 4 valores**: `OWNER`, `ADMIN`, `COACH`, `ATHLETE`. Un club tiene
+  quien lo administra sin entrenar a nadie, y un dueño que responde por el negocio.
+- **Los permisos se checan por CAPACIDAD, no por rol** (`src/lib/roles.ts`). Esto es lo importante
+  de la fase, no el enum: cada Server Action hacía `requireRole("COACH")`, así que agregar `OWNER`
+  habría dejado al dueño del club fuera de su propia plataforma. Un bug que ningún test existente
+  detectaba, visible solo al iniciar sesión como dueño. Ahora agregar un rol es editar una tabla,
+  y hay un test que fija exactamente ese escenario.
+- **`org:admin` de Clerk mapea a `OWNER`**: quien crea la organización está dando de alta su club.
+  El mapeo solo aplica al crear la membresía, nunca al actualizar — si no, un `ADMIN` degradado en
+  la app volvería a `OWNER` en el siguiente login.
+- **Limitación aceptada:** el rol es un solo valor, así que no se modela "dueño que además entrena
+  como socio", común en clubes chicos. Cuando haga falta, `role` pasa a lista; las capacidades ya
+  están listas porque nada compara el rol directamente.
+- **Se decidió NO sacar Clerk de modo desarrollo todavía** (era parte de la Fase 0 original). Para
+  un demo que maneja una sola persona, el banner es cosmético y el tope de 100 usuarios no aprieta
+  — los socios sembrados no consumen usuarios de Clerk. Los dos límites reales que sí obligan a
+  migrar antes de que entre un club de verdad: los datos de usuario **no se transfieren** entre
+  instancias, y los correos de invitación llevan prefijo "development". La regla operativa es
+  entonces: nadie real se incorpora hasta que Clerk esté en producción.
+- **Seguro en los scripts que borran** (`scripts/_guard.ts`): hoy la base de desarrollo es la que
+  sirve el sitio desplegado, y `seed-marathon-training.ts` borra entrenamientos, feedback y
+  comentarios antes de sembrar. Exigen `--force` y dicen a qué base apuntan. Se prefirió esto a
+  separar bases: resuelve el riesgo concreto en 20 minutos en vez de duplicar infraestructura para
+  un producto pre-ingreso.
+
+Lo que sigue (Fase 1) es lo que convierte esto en un club: grupos por nivel, sesiones grupales con
+lugar y horario, asistencia, estado de membresía (sembrado, sin cobrar) y página pública para
+unirse.
+
 ### Dashboard del coach: "¿de qué me tengo que ocupar?"
 
 El dashboard tenía cuatro números y una lista de atletas que decía "1/9 esta semana". El problema

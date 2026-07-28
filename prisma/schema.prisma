@@ -12,10 +12,21 @@ datasource db {
   provider = "postgresql"
 }
 
+/// Rol dentro de un club. Es JERÁRQUICO y de un solo valor: OWNER puede todo
+/// lo que puede un COACH. No se modela "es dueño Y atleta" — ver la limitación
+/// documentada en src/lib/roles.ts.
+///
+/// Los permisos NO se checan comparando el rol directamente, sino contra las
+/// capacidades de src/lib/roles.ts: si mañana entra ASSISTANT_COACH, se agrega
+/// ahí y no hay que auditar cada Server Action de nuevo.
 enum MembershipRole {
+  /// Dueño del club. Puede todo, incluidos los cobros cuando existan.
+  OWNER
+  /// Administración del club: socios y ajustes, sin entrenar a nadie.
+  ADMIN
   COACH
+  /// Socio del club.
   ATHLETE
-  // ASSISTANT_COACH -> valor futuro, no implementado en Fase 1
 }
 
 enum MembershipStatus {

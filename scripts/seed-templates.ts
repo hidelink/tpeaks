@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { assertDestructiveAllowed, positionalArgs } from "./_guard";
 
 /**
  * Siembra plantillas de entrenamiento reutilizables, con variedad real de
@@ -15,7 +16,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
  * Sin argumento, asume que solo hay un coach y lo usa.
  */
 
-const coachEmail = process.argv[2];
+const coachEmail = positionalArgs()[0];
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
@@ -130,6 +131,10 @@ const TEMPLATES = [
 ];
 
 async function main() {
+  assertDestructiveAllowed(
+    `las plantillas del club que se llamen igual que las de este script (${TEMPLATES.length})`,
+  );
+
   let coachMembership;
 
   if (coachEmail) {

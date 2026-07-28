@@ -10,6 +10,7 @@ import { CompletionForm } from "./CompletionForm";
 import { CommentForm } from "./CommentForm";
 import { DuplicateWorkoutForm } from "./DuplicateWorkoutForm";
 import { sportMeta } from "@/lib/sports";
+import { can, isStaff } from "@/lib/roles";
 
 const STATUS_STYLES: Record<string, { label: string; className: string }> = {
   PLANNED: { label: "Programado", className: "bg-blue-50 text-blue-700" },
@@ -38,13 +39,14 @@ export default async function WorkoutDetailPage({
 
   if (!workout) notFound();
 
-  // Un atleta solo puede ver su propio entrenamiento, aunque sea del mismo equipo.
-  if (membership.role === "ATHLETE" && workout.athleteMembershipId !== membership.id) {
+  // Un socio solo puede ver su propio entrenamiento, aunque sea del mismo club.
+  // El staff sí puede ver el de cualquiera del club (ya está acotado por teamId).
+  if (!isStaff(membership.role) && workout.athleteMembershipId !== membership.id) {
     notFound();
   }
 
   const athletes =
-    membership.role === "COACH"
+    can(membership.role, "MANAGE_TRAINING")
       ? await prisma.teamMembership.findMany({
           where: { teamId: membership.teamId, role: "ATHLETE", status: "ACTIVE" },
           include: { user: true },
@@ -75,7 +77,7 @@ export default async function WorkoutDetailPage({
             · {sportMeta(workout.sport).icon} {sportMeta(workout.sport).label}
           </p>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight">{workout.title}</h1>
-          {membership.role === "COACH" && (
+          {isStaff(membership.role) && (
             <p className="mt-1 text-sm text-zinc-500">Atleta: {workout.athlete.user.name}</p>
           )}
           <span
@@ -85,7 +87,7 @@ export default async function WorkoutDetailPage({
           </span>
         </div>
 
-        {membership.role === "COACH" && (
+        {can(membership.role, "MANAGE_TRAINING") && (
           <div className="flex shrink-0 flex-col items-end gap-2">
             <Link
               href={`/coach/schedule/new?date=${format(localDate, "yyyy-MM-dd")}&athleteId=${workout.athleteMembershipId}`}
@@ -180,7 +182,7 @@ export default async function WorkoutDetailPage({
             </p>
           )}
         </section>
-      ) : membership.role === "ATHLETE" ? (
+      ) : can(membership.role, "LOG_OWN_TRAINING") ? (
         <CompletionForm scheduledWorkoutId={workout.id} />
       ) : (
         <section className="rounded-2xl border border-dashed border-zinc-300 p-5 text-sm text-zinc-500">
@@ -189,7 +191,7 @@ export default async function WorkoutDetailPage({
         </section>
       )}
 
-      {membership.role === "COACH" && (
+      {can(membership.role, "MANAGE_TRAINING") && (
         <DuplicateWorkoutForm
           workoutId={workout.id}
           athletes={athletes.map((a) => ({ id: a.id, name: a.user.name }))}
@@ -214,7 +216,7 @@ export default async function WorkoutDetailPage({
             </li>
           ))}
         </ul>
-        {membership.role === "COACH" && <CommentForm scheduledWorkoutId={workout.id} />}
+        {can(membership.role, "MANAGE_TRAINING") && <CommentForm scheduledWorkoutId={workout.id} />}
       </section>
     </div>
   );

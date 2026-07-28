@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { isStaff, ROLE_LABELS } from "@/lib/roles";
 
 export default async function AdminTeamsPage() {
   const teams = await prisma.team.findMany({
@@ -16,7 +17,11 @@ export default async function AdminTeamsPage() {
 
       <ul className="divide-y divide-zinc-200">
         {teams.map((team) => {
-          const coach = team.memberships.find((m) => m.role === "COACH");
+          // El dueño si existe; si no, cualquiera del staff — equipos viejos
+          // creados antes de que existiera OWNER solo tienen COACH.
+          const responsable =
+            team.memberships.find((m) => m.role === "OWNER") ??
+            team.memberships.find((m) => isStaff(m.role));
           const athleteCount = team.memberships.filter(
             (m) => m.role === "ATHLETE" && m.status === "ACTIVE",
           ).length;
@@ -28,7 +33,8 @@ export default async function AdminTeamsPage() {
                   {team.name}
                 </Link>
                 <p className="text-sm text-zinc-500">
-                  Coach: {coach?.user.email ?? "—"} · {athleteCount} atleta
+                  {responsable ? ROLE_LABELS[responsable.role] : "Responsable"}:{" "}
+                  {responsable?.user.email ?? "—"} · {athleteCount} socio
                   {athleteCount === 1 ? "" : "s"}
                 </p>
               </div>

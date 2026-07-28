@@ -10,7 +10,7 @@ Ver el spec completo (producto, arquitectura, esquema de datos, roles, flujos, b
 
 - Next.js 16 (App Router) + TypeScript + Tailwind
 - Prisma + PostgreSQL (Supabase recomendado)
-- Clerk (auth + Organizations = Team) para identidad; permisos finos (coach/atleta) viven en nuestra propia tabla `TeamMembership`, no en Clerk
+- Clerk (auth + Organizations = club) para identidad; los permisos finos viven en nuestra propia tabla `TeamMembership` y se checan por capacidad, no en Clerk — ver "Roles de club" abajo
 - Stripe (Fase 2, no conectado todavía)
 - Vercel (hosting recomendado)
 
@@ -44,7 +44,10 @@ Ver el spec completo (producto, arquitectura, esquema de datos, roles, flujos, b
 docs/PRODUCT_SPEC.md          spec de producto + arquitectura + DB + backlog
 vitest.config.ts                config de tests (ver sección "Tests" abajo)
 prisma/schema.prisma           modelo de datos (incluye tablas de Fase 2/3 ya definidas, inactivas)
-src/lib/permissions.ts         getCurrentMembership / requireRole — única fuente de verdad de permisos
+src/lib/roles.ts               roles de club (OWNER/ADMIN/COACH/ATHLETE) y qué capacidad tiene cada uno
+src/lib/permissions.ts         getCurrentMembership / requireCapability — única fuente de verdad de permisos
+scripts/_guard.ts              seguro de los scripts que borran datos (exige --force y dice a qué base apunta)
+scripts/set-role.ts            cambia el rol de alguien en su club (sin argumentos, lista los actuales)
 src/lib/subscription-gate.ts   gate de suscripción (Fase 2), hoy siempre permite acceso
 src/lib/workout-structure.ts   contrato Zod de la estructura de un entrenamiento
 src/lib/actions/                Server Actions (crear/editar plantilla, asignar/editar/duplicar entrenamiento, marcar completado, comentar)
@@ -79,7 +82,7 @@ src/app/api/webhooks/clerk/     sincroniza User/Team/TeamMembership desde Clerk
 
 ## Estado actual (MVP Fase 1, en construcción)
 
-Ya funciona (una vez conectada la base de datos y Clerk): auth + creación de equipo vía Clerk Organizations (con onboarding para crear el equipo si el usuario no tiene uno todavía), invitar/revocar atletas por email (invitación real de Clerk Organizations, ya no un placeholder), sincronización de usuarios/equipos por webhook o al vuelo si el webhook no está configurado, dashboard de coach y atleta con las 4 métricas, calendario **semanal y mensual** navegable (anterior/siguiente/hoy) con filtro por atleta y búsqueda por título, creación/edición/borrado de plantillas de entrenamiento con editor de segmentos, **asignación de un entrenamiento a uno o varios atletas a la vez** (checklist con "seleccionar todos" — el caso real de un coach con equipo, no uno-por-uno), edición de un entrenamiento ya asignado (incluye "moverlo" cambiando la fecha), duplicar/copiar un entrenamiento a otra fecha o a otro atleta, detalle de entrenamiento con feedback manual del atleta y comentarios del coach, perfil de atleta con historial + nota privada del coach editable, **cálculo automático de ritmos de entrenamiento** a partir de un resultado de carrera reciente (modelo VDOT, ver nota abajo), una gráfica de **carga de entrenamiento** (sRPE semanal + promedio móvil de 4 semanas) en el dashboard del atleta y en el perfil que ve el coach, **white-label activado** (logo + color de acento configurables en Ajustes, aplicados en runtime en toda la plataforma), un **rol de admin de plataforma** (`/admin`, ve todos los equipos para soporte interno — se activa a mano con `scripts/make-admin.ts`, no hay auto-registro), y páginas públicas de **Términos de servicio / Aviso de privacidad**.
+Ya funciona (una vez conectada la base de datos y Clerk): auth + creación de equipo vía Clerk Organizations (con onboarding para crear el equipo si el usuario no tiene uno todavía), invitar/revocar atletas por email (invitación real de Clerk Organizations, ya no un placeholder), sincronización de usuarios/equipos por webhook o al vuelo si el webhook no está configurado, dashboard de coach y atleta con las 4 métricas, calendario **semanal y mensual** navegable (anterior/siguiente/hoy) con filtro por atleta y búsqueda por título, creación/edición/borrado de plantillas de entrenamiento con editor de segmentos, **asignación de un entrenamiento a uno o varios atletas a la vez** (checklist con "seleccionar todos" — el caso real de un coach con equipo, no uno-por-uno), edición de un entrenamiento ya asignado (incluye "moverlo" cambiando la fecha), duplicar/copiar un entrenamiento a otra fecha o a otro atleta, detalle de entrenamiento con feedback manual del atleta y comentarios del coach, perfil de atleta con historial + nota privada del coach editable, **cálculo automático de ritmos de entrenamiento** a partir de un resultado de carrera reciente (modelo VDOT, ver nota abajo), una gráfica de **carga de entrenamiento** (sRPE semanal + promedio móvil de 4 semanas) en el dashboard del atleta y en el perfil que ve el coach, **white-label activado** (logo + color de acento configurables en Ajustes, aplicados en runtime en toda la plataforma), **roles de club** (dueño / administración / coach / socio, con permisos por capacidad), un **rol de admin de plataforma** (`/admin`, ve todos los equipos para soporte interno — se activa a mano con `scripts/make-admin.ts`, no hay auto-registro), y páginas públicas de **Términos de servicio / Aviso de privacidad**.
 
 Pendiente (ver Paso 8 del spec, "Nice to have"): drag-and-drop real en el calendario (mover/duplicar hoy se hacen desde botones explícitos, no arrastrando); notificaciones in-app de comentarios nuevos.
 
@@ -89,6 +92,42 @@ Desplegado en <https://tpeaks.vercel.app> — pero con llaves de Clerk **de desa
 base de Supabase que usa el entorno local. Sirve para enseñárselo a alguien; no es todavía un
 entorno de producción de verdad (falta instancia de Clerk de producción con dominio propio, y
 una base separada de la de desarrollo).
+
+### Roles de club y capacidades
+
+Un club tiene cuatro roles: **Dueño** (`OWNER`), **Administración** (`ADMIN`), **Coach** y
+**Socio** (`ATHLETE`). Los permisos **no** se checan comparando el rol, sino contra capacidades
+(`src/lib/roles.ts`):
+
+| | Entrenamiento | Socios | Ajustes del club | Registrar lo propio |
+|---|---|---|---|---|
+| Dueño | sí | sí | sí | — |
+| Administración | — | sí | sí | — |
+| Coach | sí | sí | — | — |
+| Socio | — | — | — | sí |
+
+La razón de la indirección es concreta: cuando solo existían `COACH` y `ATHLETE`, cada Server
+Action hacía `requireRole("COACH")`. Al agregar `OWNER`, todas esas comparaciones habrían dejado
+al dueño del club fuera de su propia plataforma, y ningún test lo habría atrapado — solo se vería
+al iniciar sesión como dueño. Hay un test que fija exactamente ese caso.
+
+**Limitación conocida:** el rol es un solo valor, así que no se puede expresar "dueño que además
+entrena como socio", común en clubes chicos. El cambio será pasar `role` a una lista; las
+capacidades ya están listas porque nada compara el rol directamente.
+
+En Clerk, quien crea la organización queda como `OWNER`. Después se ajusta con:
+
+```bash
+npx tsx scripts/set-role.ts email@ejemplo.com ADMIN
+```
+
+Sin argumentos lista los roles actuales. Los roles se ven en **Socios y staff**.
+
+### Scripts que borran datos
+
+`seed-marathon-training.ts` y `seed-templates.ts` borran antes de sembrar, y hoy la base de
+desarrollo es la misma que sirve el sitio desplegado. Ambos exigen `--force` y antes imprimen a
+qué base apuntan (`scripts/_guard.ts`). Sin la bandera se detienen sin tocar nada.
 
 ### Nota: dos URLs de base de datos, y la diferencia tumbó producción
 
@@ -251,7 +290,7 @@ maratón), el fondo largo más largo del bloque, y el día de la carrera. Reempl
 cualquier entrenamiento previo del atleta para contar una sola historia coherente.
 
 ```bash
-npx tsx scripts/seed-marathon-training.ts [email-del-atleta]
+npx tsx scripts/seed-marathon-training.ts [email-del-atleta] --force
 # default: member@yopmail.com
 ```
 
@@ -260,7 +299,7 @@ variedad real (series en pista, tempo, fondo largo progresivo, fartlek) — para
 `/coach/templates` se vea como se usaría de verdad en vez de vacío.
 
 ```bash
-npx tsx scripts/seed-templates.ts [email-del-coach]
+npx tsx scripts/seed-templates.ts [email-del-coach] --force
 # sin argumento, asume que solo hay un coach y lo usa
 ```
 
