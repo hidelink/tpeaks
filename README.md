@@ -60,6 +60,7 @@ src/components/CalendarFilterBar.tsx  filtro por atleta (coach) + búsqueda por 
 src/middleware.ts               Clerk middleware (protege todas las rutas salvo /sign-in, /sign-up, webhooks)
 src/lib/actions/invite.ts       invitar/revocar atleta vía la API de invitaciones de Clerk Organizations
 src/lib/actions/athlete-profile.ts  nota privada del coach + resultado de carrera/VDOT de un atleta
+src/lib/coach-dashboard.ts     cálculos puros del dashboard: cumplimiento sobre lo vencido, inactividad, carga semana vs. anterior
 src/lib/sports.ts              tipos de sesión (correr, trail, bici, natación, fuerza, movilidad) y qué campos aplica cada uno
 src/components/SportSelect.tsx  selector de tipo, compartido por plantillas, asignación y edición
 src/lib/vdot.ts                cálculo de ritmos de entrenamiento (modelo VDOT de Daniels) — solo asfalto/pista, ver nota abajo
@@ -88,6 +89,17 @@ Desplegado en <https://tpeaks.vercel.app> — pero con llaves de Clerk **de desa
 base de Supabase que usa el entorno local. Sirve para enseñárselo a alguien; no es todavía un
 entorno de producción de verdad (falta instancia de Clerk de producción con dominio propio, y
 una base separada de la de desarrollo).
+
+### Nota: el cumplimiento semanal medía otra cosa
+
+`Cumplimiento semanal` dividía entre **todos** los entrenamientos de la semana, incluidos los de
+días que aún no llegan. Un martes con 9 sesiones programadas y 1 hecha daba 11%, cuando de esas 9
+solo 2 habían vencido. El número quedaba cerca de cero cada lunes y saltaba el domingo: no medía
+cumplimiento sino cuánto de la semana había transcurrido, y eso entrena al coach a ignorarlo.
+
+Ahora se calcula solo sobre lo vencido, **excluyendo hoy** (la sesión de hoy todavía se puede
+hacer en la tarde), y muestra "—" cuando nada ha vencido en vez de un 0% falso. Ver
+`weeklyCompliance` en `src/lib/coach-dashboard.ts`, con tests que encodifican el caso real.
 
 ### Nota: multideporte es una etiqueta, no un modelo por deporte
 

@@ -485,6 +485,27 @@ cross-team ni impersonar usuarios; ambos quedan como siguiente escalón si hace 
 - [ ] **Campos propios de fuerza** (series/reps/peso en el segmento): hoy se escriben en la etiqueta. Aditivo al contrato Zod cuando el uso real lo pida — ver abajo.
 - [ ] **Objetivo de carrera del atleta** (idea de producto, sin construir): un lugar para capturar la carrera meta (nombre, fecha, distancia, desnivel, trail vs. asfalto). Sin esto, el coach no tiene dónde ver "para qué está entrenando" cada atleta, y el entrenamiento debería variar según eso (un trail con desnivel necesita fondos con subida y trabajo de fuerza; un maratón de asfalto necesita más volumen a ritmo objetivo). Candidato natural: campos en `AthleteProfile` (`goalRaceName`, `goalRaceDate`, `goalDistanceMeters`, `goalElevationGainMeters`, `goalTerrain: ROAD | TRAIL`), visibles en el perfil que ve el coach. Demostrado por ahora solo con datos de prueba (`scripts/seed-marathon-training.ts`), no con un campo real en el modelo.
 
+### Dashboard del coach: "¿de qué me tengo que ocupar?"
+
+El dashboard tenía cuatro números y una lista de atletas que decía "1/9 esta semana". El problema
+no era que estuviera vacío: era que no contestaba la única pregunta con la que un coach abre la
+app por la mañana. Nadie entra a ver métricas; entra a saber de qué ocuparse.
+
+- **`Cumplimiento semanal` estaba mal medido.** Dividía entre todos los entrenamientos de la
+  semana, incluidos los de días que no habían llegado — un martes con 9 programados y 1 hecho daba
+  11%. Era una medida de cuánto de la semana había transcurrido, no de cumplimiento. Ahora cuenta
+  solo lo vencido, excluye hoy (la sesión de hoy aún puede hacerse) y muestra "—" en vez de un 0%
+  falso cuando nada venció. Los tests encodifican el caso real que lo destapó.
+- **"Requiere tu atención"** es la pieza central: vencidos sin marcar, feedback sin responder
+  (comentario del atleta o RPE ≥ 8 sin comentario del coach, últimos 14 días) y atletas sin
+  registrar nada en 10 días — incluidos los que nunca registraron uno, que es el caso más fácil de
+  que se te pierda un atleta recién invitado. Cada renglón es un enlace directo.
+- **La lista de atletas dice algo.** Cumplimiento propio, hace cuánto registró algo por última vez,
+  y la carga de esta semana contra la anterior. La comparación de carga va en gris a propósito: la
+  semana en curso va a medias, así que un "−40%" del martes no es una alerta.
+- **La lógica vive en `src/lib/coach-dashboard.ts`, pura y testeada**; las queries se quedan en la
+  página. La carga del equipo sale de una sola query agrupada en memoria, no de una por atleta.
+
 ### Tipo de sesión (multideporte)
 
 Un corredor no solo corre: hace fuerza, movilidad, y a veces bici para sumar volumen sin impacto.
