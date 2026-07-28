@@ -155,6 +155,17 @@ completado en las semanas pasadas) para un atleta que ya exista en tu base de da
 útil para ver la gráfica de carga con datos reales. Sigue un patrón deliberado de
 3 semanas construyendo + 1 de descarga.
 
+`scripts/seed-marathon-training.ts` siembra un bloque completo de 9 semanas rumbo al
+Maratón de la Ciudad de México (base → pico → taper → carrera), pensado como demo de
+cómo se vería un plan real de un amateur normal — incluye una carrera de control (medio
+maratón), el fondo largo más largo del bloque, y el día de la carrera. Reemplaza
+cualquier entrenamiento previo del atleta para contar una sola historia coherente.
+
+```bash
+npx tsx scripts/seed-marathon-training.ts [email-del-atleta]
+# default: member@yopmail.com
+```
+
 ```bash
 npx tsx scripts/seed-test-workouts.ts [email-del-atleta]
 # default: member@yopmail.com

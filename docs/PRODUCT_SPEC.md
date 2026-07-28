@@ -480,6 +480,7 @@ cross-team ni impersonar usuarios; ambos quedan como siguiente escalón si hace 
 - [x] Analítica de tendencia — carga de entrenamiento semanal (sRPE) + promedio móvil de 4 semanas, ver abajo.
 - [x] Admin de plataforma para soporte interno — ver Paso 5.
 - [x] Páginas legales (Términos de servicio / Aviso de privacidad) — borrador honesto sobre qué datos se recolectan, no una revisión legal real. Ver `src/app/terms/` y `src/app/privacy/`.
+- [ ] **Objetivo de carrera del atleta** (idea de producto, sin construir): un lugar para capturar la carrera meta (nombre, fecha, distancia, desnivel, trail vs. asfalto). Sin esto, el coach no tiene dónde ver "para qué está entrenando" cada atleta, y el entrenamiento debería variar según eso (un trail con desnivel necesita fondos con subida y trabajo de fuerza; un maratón de asfalto necesita más volumen a ritmo objetivo). Candidato natural: campos en `AthleteProfile` (`goalRaceName`, `goalRaceDate`, `goalDistanceMeters`, `goalElevationGainMeters`, `goalTerrain: ROAD | TRAIL`), visibles en el perfil que ve el coach. Demostrado por ahora solo con datos de prueba (`scripts/seed-marathon-training.ts`), no con un campo real en el modelo.
 
 ### Carga de entrenamiento (sRPE)
 
