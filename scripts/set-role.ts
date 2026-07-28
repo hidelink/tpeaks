@@ -12,7 +12,11 @@ import { positionalArgs } from "./_guard";
  *
  * Uso:
  *   npx tsx scripts/set-role.ts email@ejemplo.com OWNER
+ *   npx tsx scripts/set-role.ts email@ejemplo.com COACH "Terra Peak"
  *   npx tsx scripts/set-role.ts                     (lista los roles actuales)
+ *
+ * El tercer argumento solo hace falta si la persona pertenece a más de un club;
+ * en ese caso el script se niega a adivinar y te dice cuáles son.
  *
  * No lleva --force: cambiar un rol es reversible corriéndolo otra vez.
  */
@@ -60,11 +64,37 @@ async function main() {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) throw new Error(`No existe ningún usuario con email ${email}.`);
 
-  const membership = await prisma.teamMembership.findFirst({
+  // findMany y no findFirst: una persona puede pertenecer a varios clubes (la
+  // membresía es por par club-usuario). Con findFirst se elegía uno arbitrario
+  // y se reportaba el cambio sin decir en cuál — silenciosamente equivocado.
+  const memberships = await prisma.teamMembership.findMany({
     where: { userId: user.id },
     include: { team: true },
+    orderBy: { team: { name: "asc" } },
   });
-  if (!membership) throw new Error(`${email} no pertenece a ningún club.`);
+  if (memberships.length === 0) throw new Error(`${email} no pertenece a ningún club.`);
+
+  const clubFilter = positionalArgs()[2];
+  const matching = clubFilter
+    ? memberships.filter((m) => m.team.name.toLowerCase().includes(clubFilter.toLowerCase()))
+    : memberships;
+
+  if (matching.length === 0) {
+    throw new Error(
+      `${email} no pertenece a ningún club que coincida con "${clubFilter}".\n` +
+        `Clubes: ${memberships.map((m) => m.team.name).join(", ")}`,
+    );
+  }
+  if (matching.length > 1) {
+    throw new Error(
+      `${email} pertenece a ${matching.length} clubes — especifica cuál:\n` +
+        matching
+          .map((m) => `  npx tsx scripts/set-role.ts ${email} ${role} "${m.team.name}"`)
+          .join("\n"),
+    );
+  }
+
+  const membership = matching[0];
 
   if (membership.role === role) {
     console.log(`${email} ya es ${ROLE_LABELS[role]} en ${membership.team.name}. Sin cambios.`);
