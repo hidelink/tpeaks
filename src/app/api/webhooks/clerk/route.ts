@@ -76,8 +76,34 @@ export async function POST(req: Request) {
     case "organizationMembership.created":
     case "organizationMembership.updated": {
       const { organization, public_user_data, role } = event.data;
-      const team = await prisma.team.findUnique({ where: { clerkOrgId: organization.id } });
-      const user = await prisma.user.findUnique({ where: { clerkUserId: public_user_data.user_id } });
+
+      // Antes esto era `if (!team || !user) break`, y ahí se perdía la
+      // membresía en silencio: Clerk no garantiza el orden de los eventos, así
+      // que `organizationMembership.created` puede llegar antes que
+      // `user.created` (o este último puede haber fallado). El evento se daba
+      // por atendido y nadie lo reintentaba — pasó de verdad con un coach
+      // invitado, que aceptó y se quedó sin membresía.
+      //
+      // Ahora el manejador se basta a sí mismo: el payload trae lo necesario
+      // para crear a la persona, y la organización se puede pedir a Clerk.
+      const user =
+        (await prisma.user.findUnique({ where: { clerkUserId: public_user_data.user_id } })) ??
+        (public_user_data.identifier
+          ? await upsertUserFromClerk(
+              public_user_data.user_id,
+              public_user_data.identifier,
+              [public_user_data.first_name, public_user_data.last_name]
+                .filter(Boolean)
+                .join(" ") || public_user_data.identifier,
+              public_user_data.image_url,
+            )
+          : null);
+
+      let team = await prisma.team.findUnique({ where: { clerkOrgId: organization.id } });
+      if (!team) {
+        team = await upsertTeamFromClerkOrg(organization.id, organization.name, organization.slug);
+      }
+
       if (!team || !user) break;
 
       // El rol sale de la invitación del club si existe (ahí quedó lo que

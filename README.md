@@ -138,6 +138,27 @@ Las tres capas se aplican juntas, y solo una es seguridad:
 3. **Server Action** — `requireCapability` lanza `ForbiddenError`. **Esta es la única que es
    seguridad**; las otras dos existen para no mostrar un formulario que va a fallar al guardar.
 
+### Aceptar una invitación: tres cosas que tenían que estar bien
+
+Un coach invitado aceptó y aterrizó en la página de bienvenida de Clerk, no en el club. Salieron
+tres fallas encadenadas, y la tercera era la que de verdad lo rompía:
+
+1. **La invitación no decía a dónde volver.** `createOrganizationInvitation` acepta `redirectUrl`
+   y no se lo mandábamos, así que Clerk usaba su propia página. Ahora apunta a la raíz de la app,
+   que reparte según el rol. La URL sale de `NEXT_PUBLIC_APP_URL` (o del dominio de producción que
+   inyecta Vercel) — el correo se abre fuera de la app, una ruta relativa no sirve.
+2. **`/onboarding` le habría pedido crear su propio club.** Trataba igual dos casos muy distintos:
+   no pertenecer a ningún club, y pertenecer a uno pero sin tenerlo activo en la sesión. El segundo
+   ahora ofrece **entrar** al club en vez de fundar otro.
+3. **El webhook perdía la membresía en silencio.** El manejador de
+   `organizationMembership.created` hacía `if (!team || !user) break`, y Clerk **no garantiza el
+   orden de los eventos**: si llega antes que `user.created`, se salía sin hacer nada y nadie lo
+   reintentaba. Ahora se basta a sí mismo — crea a la persona con lo que trae el payload y pide la
+   organización a Clerk si hace falta.
+
+Lo que salvaba el caso era el fallback sync-on-read de `getCurrentMembership`, pero solo corre
+cuando la persona **entra a la app** — y por (1) nunca entraba. Las tres fallas se tapaban entre sí.
+
 ### Quién es qué, y cómo se cambia
 
 En Clerk, quien crea la organización queda como `ADMIN` de su club. Al invitar a alguien más,

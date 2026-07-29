@@ -5,6 +5,7 @@ import { clerkClient } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { requireCapability } from "@/lib/permissions";
 import { ROLE_LABELS } from "@/lib/roles";
+import { absoluteUrl } from "@/lib/app-url";
 import type { MembershipRole } from "@/generated/prisma/enums";
 
 /**
@@ -67,6 +68,11 @@ export async function inviteMember(email: string, role: MembershipRole) {
     emailAddress,
     role: "org:member",
     inviterUserId: membership.user.clerkUserId,
+    // Sin esto, Clerk manda a su propia página de bienvenida ("Now, it's time
+    // to connect Clerk to your application"), que no significa nada para quien
+    // acaba de aceptar una invitación a un club. La raíz reparte según el rol:
+    // staff a /coach, socio a /athlete.
+    redirectUrl: absoluteUrl("/"),
   });
 
   // upsert y no create: reinvitar a alguien reemplaza el rol prometido en vez

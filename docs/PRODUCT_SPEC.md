@@ -609,6 +609,30 @@ estaba excluido del reporte de cobertura, así que el 91% global se veía sano m
 autorización, validación e integridad no se medía. Se quitó la exclusión y se escribieron los
 primeros tests de acciones, con regresiones para estos bugs.
 
+### Tres fallas encadenadas al aceptar una invitación
+
+Se invitó a un coach de verdad, aceptó, y aterrizó en la página de bienvenida de Clerk. Al
+investigarlo salieron tres fallas distintas que se tapaban entre sí — y ninguna se habría visto sin
+probar el flujo completo con una persona real.
+
+1. **La invitación no llevaba `redirectUrl`.** El parámetro existe en la API de Clerk; sin él, usa
+   su propia página. Se agregó apuntando a la raíz, que reparte por rol. Hizo falta un helper de URL
+   absoluta (`src/lib/app-url.ts`): el correo se abre fuera de la app.
+2. **`/onboarding` habría pedido fundar un club.** Trataba igual "no pertenece a ningún club" y
+   "pertenece a uno pero su sesión no lo tiene activo". A un coach recién invitado le habríamos
+   pedido crear su propio club en vez de entrar al que lo invitó. Ahora distingue los dos casos.
+3. **El webhook perdía la membresía en silencio**, y esta era la falla de fondo. El manejador hacía
+   `if (!team || !user) break`. Clerk **no garantiza el orden de los eventos**, así que
+   `organizationMembership.created` puede llegar antes que `user.created`: el evento se daba por
+   atendido, nadie lo reintentaba, y la persona quedaba aceptada en Clerk pero sin membresía en
+   nuestra base. Verificado en la base: el coach había aceptado y su invitación seguía sin consumir.
+   Ahora el manejador se basta a sí mismo.
+
+La lección que vale guardar: **el fallback sync-on-read solo corre cuando la persona entra a la
+app.** Confiábamos en él como red de seguridad del webhook, pero la falla (1) impedía justamente
+que entrara. Una red de seguridad que depende de que el usuario llegue no cubre el caso en que no
+llega.
+
 ### Cambiar el rol desde la pantalla de socios
 
 Hasta aquí el rol solo se podía cambiar con un script: `inviteAthlete` manda `org:member` quemado,
