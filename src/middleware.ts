@@ -4,6 +4,12 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 // documenta y soporta middleware.ts (funciona, aunque el nombre esté
 // deprecado). Revisar cuando Clerk publique soporte explícito para proxy.ts.
 const isPublicRoute = createRouteMatcher([
+  // La raíz decide sola qué mostrar: landing si no hay sesión, o redirect según
+  // el rol si la hay (ver src/app/page.tsx). Estando protegida, el middleware
+  // rebotaba a /sign-in antes de que la página corriera, así que la landing para
+  // visitantes era código inalcanzable — y cualquier parámetro de la URL (por
+  // ejemplo el ticket de una invitación) se perdía en ese rebote.
+  "/",
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/api/webhooks(.*)",

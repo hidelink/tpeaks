@@ -615,9 +615,18 @@ Se invitó a un coach de verdad, aceptó, y aterrizó en la página de bienvenid
 investigarlo salieron tres fallas distintas que se tapaban entre sí — y ninguna se habría visto sin
 probar el flujo completo con una persona real.
 
-1. **La invitación no llevaba `redirectUrl`.** El parámetro existe en la API de Clerk; sin él, usa
-   su propia página. Se agregó apuntando a la raíz, que reparte por rol. Hizo falta un helper de URL
-   absoluta (`src/lib/app-url.ts`): el correo se abre fuera de la app.
+1. **Un diagnóstico equivocado, y vale la pena dejarlo escrito.** Se concluyó que faltaba
+   `redirectUrl` en la invitación y se agregó apuntando a `/`. Fue peor: esa ruta exigía sesión, el
+   middleware rebotaba a `/sign-in` y **se perdía el ticket**, así que el invitado veía un
+   formulario de ingreso vacío para una cuenta inexistente. La documentación de Clerk lo dice
+   claro: si especificas `redirectUrl`, *"you must handle the authentication flows in your code for
+   that page"*. Sin él, Clerk manda a la pantalla correcta y consume el ticket solo.
+
+   La evidencia que descartaba el diagnóstico estaba a la vista desde el principio: otro socio había
+   aceptado su invitación con éxito **antes** de que existiera `redirectUrl`. Lo que en realidad
+   mandó al coach a la página de bienvenida de Clerk fue abrir el link con la sesión del admin ya
+   abierta. Se revirtió, y a dónde llega alguien después de autenticarse se controla con
+   `forceRedirectUrl` en nuestros propios componentes.
 2. **`/onboarding` habría pedido fundar un club.** Trataba igual "no pertenece a ningún club" y
    "pertenece a uno pero su sesión no lo tiene activo". A un coach recién invitado le habríamos
    pedido crear su propio club en vez de entrar al que lo invitó. Ahora distingue los dos casos.
