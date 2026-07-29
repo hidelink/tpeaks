@@ -5,6 +5,19 @@ import { clerkClient } from "@clerk/nextjs/server";
 import { requireCapability } from "@/lib/permissions";
 
 /**
+ * Validación mínima antes de llamar a Clerk. Sin esto, un email mal escrito
+ * llega hasta Clerk y el error crudo del SDK sale en pantalla; y sin normalizar,
+ * "Ana@Club.com" y "ana@club.com" crean dos invitaciones para la misma persona.
+ */
+function cleanEmail(email: string) {
+  const normalized = email.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+    throw new Error("Escribe un correo válido.");
+  }
+  return normalized;
+}
+
+/**
  * Invita a un atleta por email a la Organization (Team) del coach. Clerk
  * envía el correo y maneja el flujo de aceptación; cuando el atleta acepta,
  * nuestro webhook (o el fallback sync-on-read en getCurrentMembership) crea
@@ -13,11 +26,12 @@ import { requireCapability } from "@/lib/permissions";
  */
 export async function inviteAthlete(email: string) {
   const membership = await requireCapability("MANAGE_MEMBERS");
+  const emailAddress = cleanEmail(email);
 
   const client = await clerkClient();
   await client.organizations.createOrganizationInvitation({
     organizationId: membership.team.clerkOrgId,
-    emailAddress: email,
+    emailAddress,
     role: "org:member",
     inviterUserId: membership.user.clerkUserId,
   });

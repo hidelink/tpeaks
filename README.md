@@ -307,6 +307,12 @@ a la base de datos. Ver `docs/PRODUCT_SPEC.md`, sección de riesgos, para el det
 
 ## Tests
 
+La capa de Server Actions (`src/lib/actions/`) sí se prueba, con Prisma y los guards mockeados.
+Estuvo sin un solo test **y excluida del reporte de cobertura**, así que el porcentaje global se
+veía sano mientras la capa con autorización, validación e integridad no se medía — ahí estaban
+todos los bugs de la última revisión. Si agregas una acción, agrégale tests: como mínimo que exija
+la capacidad correcta, que acote por `teamId`, y que valide antes de escribir.
+
 ```bash
 npm test              # corre toda la suite una vez
 npm run test:watch    # modo watch

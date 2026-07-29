@@ -609,6 +609,28 @@ estaba excluido del reporte de cobertura, así que el 91% global se veía sano m
 autorización, validación e integridad no se medía. Se quitó la exclusión y se escribieron los
 primeros tests de acciones, con regresiones para estos bugs.
 
+### Cubrir la capa de acciones encontró cinco bugs más
+
+Al escribir los primeros tests de `src/lib/actions/` (de 58% a 92% de cobertura real) salieron
+cinco defectos que ninguna prueba existente podía ver:
+
+1. **El feedback del socio no se validaba en absoluto.** El RPE se **multiplica** por la duración
+   para la carga de entrenamiento, así que un 100 aplastaba la escala de la gráfica y dejaba las
+   demás semanas visualmente en cero; y un RPE ≥ 8 dispara el panel del coach. Tampoco había tope
+   para distancia (un km negativo restaba de "Km corriendo") ni para duración.
+2. **Doble envío.** `WorkoutCompletion.scheduledWorkoutId` es `@unique`: un segundo clic reventaba
+   con un error crudo de Prisma en la cara del socio.
+3. **El color de marca entraba sin validar** a la variable CSS que pinta todos los botones
+   principales del club. El formulario usa `<input type="color">`, pero una Server Action es un
+   endpoint público.
+4. **El email de invitación no se validaba ni normalizaba**, así que "Ana@Club.com" y
+   "ana@club.com" generaban dos invitaciones para la misma persona.
+5. **El título de plantilla no se validaba en el servidor**, solo con el `required` del formulario.
+
+El patrón que los une: **se confiaba en la validación del cliente.** Un Server Action es un
+endpoint público; lo que valide el formulario no cuenta. Los cinco son de la misma familia que los
+de la revisión anterior — supuestos que la interfaz cumple y la acción no exige.
+
 Lo que sigue en la Fase 1: estado de membresía (sembrado, sin cobrar) y página pública para
 unirse. Ahí el perfil del socio probablemente se
 divida en dos: la parte administrativa (`MANAGE_MEMBERS`, con estado de pago) y la deportiva
