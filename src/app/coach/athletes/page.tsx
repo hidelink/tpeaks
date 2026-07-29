@@ -44,8 +44,13 @@ export default async function CoachAthletesPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Socios y staff</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">Socios y staff</h1>
+
+      {/* El formulario va en su propio bloque y no compartiendo fila con el
+          título: al aparecer el mensaje de éxito, el formulario crecía y
+          empujaba el encabezado, así que la pantalla brincaba al invitar.
+          Mismo patrón que /coach/groups. */}
+      <div className="rounded-xl border border-zinc-200 p-4">
         <InviteMemberForm canInviteStaff={canAssignRoles} />
       </div>
 
