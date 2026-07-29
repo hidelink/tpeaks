@@ -580,6 +580,35 @@ otra el plan individual de un socio, que puede hacer solo.
   mientras la gente va llegando; guardar la lista completa de golpe obligaría a decidir por
   adelantado sobre quien todavía no llega.
 
+### Revisión de la Fase 1: el estado del socio no se propagaba
+
+Una revisión al terminar las dos piezas encontró tres síntomas de una sola causa: **dar de baja a
+un socio no lo sacaba de sus grupos.** La membresía se marca `REMOVED` (correcto: su historial
+sigue siendo del club), pero las filas de `TrainingGroupMember` se quedaban.
+
+De ahí salían:
+
+1. El chip decía "Avanzados (8)" cuando solo 7 eran visibles y seleccionables.
+2. Al pulsarlo se seleccionaba un id que no aparecía en la lista, así que no había forma de
+   quitarlo.
+3. `setTrainingGroupMembers` exigía que todos fueran activos, así que al guardar rechazaba el id
+   que la propia pantalla había mandado: **el grupo quedaba imposible de guardar**, con un mensaje
+   ("no es de tu club") que además era falso.
+
+Y una cuarta, independiente: las pantallas solo ofrecían socios activos, pero `scheduleWorkoutToMany`,
+`duplicateScheduledWorkout` y `markAttendance` aceptaban a cualquier atleta del club. Un id viejo le
+programaba entrenamientos a alguien que ya se había ido.
+
+Arreglado en tres capas: el webhook borra la pertenencia a grupos al dar de baja (la causa), las
+lecturas filtran a socios activos (por si queda dato sucio o el webhook no llegó), y las acciones
+exigen `status: "ACTIVE"` donde asignan trabajo. `setTrainingGroupMembers` ahora distingue dos
+cosas que antes mezclaba: pertenecer al club se **exige**, estar activo se **filtra**.
+
+**Lo que la revisión dijo de las pruebas:** `src/lib/actions/**` no tenía un solo test y además
+estaba excluido del reporte de cobertura, así que el 91% global se veía sano mientras la capa con
+autorización, validación e integridad no se medía. Se quitó la exclusión y se escribieron los
+primeros tests de acciones, con regresiones para estos bugs.
+
 Lo que sigue en la Fase 1: estado de membresía (sembrado, sin cobrar) y página pública para
 unirse. Ahí el perfil del socio probablemente se
 divida en dos: la parte administrativa (`MANAGE_MEMBERS`, con estado de pago) y la deportiva

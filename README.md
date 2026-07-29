@@ -178,7 +178,21 @@ mismo, el porcentaje de asistencia se calcula sobre lo registrado y no sobre los
 muestra "—" cuando no hay nada — mismo criterio que el cumplimiento del dashboard.
 
 El pase de lista marca de una persona a la vez y es optimista en el cliente: se usa de pie en el
-parque, con mala red, mientras la gente llega.
+parque, con mala red, mientras la gente llega. El estado optimista guarda **solo** las marcas en
+vuelo y cada una se borra al resolverse, con éxito o con error — así el servidor vuelve a ser la
+verdad en cuanto termina la petición. Se deshabilita únicamente la fila en vuelo, no todas: un
+`disabled` global anularía justo el beneficio de ser optimista.
+
+### El estado del socio tiene que propagarse
+
+Dar de baja a un socio lo marca `REMOVED` (su historial sigue siendo del club) **y borra su
+pertenencia a grupos**. Si no, el grupo sigue contándolo y seleccionándolo, y el guardado del grupo
+se rompe. Hay tres capas: el webhook limpia al dar de baja, las lecturas de grupo filtran a socios
+activos, y las acciones que asignan trabajo exigen `status: "ACTIVE"`.
+
+Si agregas una acción que asigne algo a un socio, filtra por `status: "ACTIVE"` y no solo por
+pertenecer al club — las pantallas solo ofrecen activos, así que aceptar más es aceptar ids que la
+interfaz nunca mostró.
 
 ### Scripts que borran datos
 

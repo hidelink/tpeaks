@@ -23,18 +23,38 @@ const STYLES: Record<AttendanceStatus, string> = {
  */
 export function AttendanceRoster({ sessionId, roster }: { sessionId: string; roster: Row[] }) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  // Optimista: en el parque la red es mala y esperar al servidor por cada
-  // toque haría el pase de lista insufrible.
-  const [local, setLocal] = useState<Record<string, AttendanceStatus | null>>({});
+
+  /**
+   * `pending` guarda SOLO las marcas en vuelo, y cada una se borra al
+   * resolverse — con éxito o con error. Así el servidor siempre vuelve a ser
+   * la verdad en cuanto la petición termina.
+   *
+   * La versión anterior guardaba el valor local para siempre: una vez tocada
+   * una persona, su fila dejaba de reflejar el servidor el resto de la sesión,
+   * y un error la dejaba mostrando un valor viejo en vez de la verdad.
+   */
+  const [pending, setPending] = useState<Record<string, AttendanceStatus | null>>({});
 
   const statusOf = (row: Row) =>
-    row.membershipId in local ? local[row.membershipId] : row.status;
+    row.membershipId in pending ? pending[row.membershipId] : row.status;
+
+  function settle(membershipId: string) {
+    setPending((prev) => {
+      const next = { ...prev };
+      delete next[membershipId];
+      return next;
+    });
+  }
 
   function set(row: Row, status: AttendanceStatus) {
+    // Una marca en vuelo por persona: evita que dos toques rápidos sobre la
+    // misma fila lleguen desordenados y dejen la base en el estado del primero.
+    if (row.membershipId in pending) return;
+
     const next = statusOf(row) === status ? null : status;
-    setLocal((prev) => ({ ...prev, [row.membershipId]: next }));
+    setPending((prev) => ({ ...prev, [row.membershipId]: next }));
     setError(null);
 
     startTransition(async () => {
@@ -43,9 +63,9 @@ export function AttendanceRoster({ sessionId, roster }: { sessionId: string; ros
         else await markAttendance(sessionId, row.membershipId, next);
         router.refresh();
       } catch (err) {
-        // Revertir: si falló, el estado local mentía.
-        setLocal((prev) => ({ ...prev, [row.membershipId]: row.status }));
         setError(err instanceof Error ? err.message : "No se pudo guardar.");
+      } finally {
+        settle(row.membershipId);
       }
     });
   }
@@ -73,7 +93,7 @@ export function AttendanceRoster({ sessionId, roster }: { sessionId: string; ros
                   <button
                     key={option}
                     type="button"
-                    disabled={isPending}
+                    disabled={row.membershipId in pending}
                     onClick={() => set(row, option)}
                     aria-pressed={status === option}
                     className={`rounded-full border px-2.5 py-0.5 text-xs disabled:opacity-60 ${

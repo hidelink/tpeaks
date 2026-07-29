@@ -34,11 +34,20 @@ export async function scheduleWorkoutToMany(input: {
     throw new ForbiddenError("Selecciona al menos un atleta.");
   }
 
+  // status ACTIVE, no solo "del club": la interfaz solo ofrece socios activos,
+  // así que aceptar a un dado de baja significaba que un id viejo (de un chip
+  // de grupo desactualizado o de un formulario reenviado) le programaba
+  // entrenamientos a alguien que ya se fue.
   const athletes = await prisma.teamMembership.findMany({
-    where: { id: { in: input.athleteMembershipIds }, teamId: membership.teamId, role: "ATHLETE" },
+    where: {
+      id: { in: input.athleteMembershipIds },
+      teamId: membership.teamId,
+      role: "ATHLETE",
+      status: "ACTIVE",
+    },
   });
   if (athletes.length !== input.athleteMembershipIds.length) {
-    throw new ForbiddenError("Alguno de esos atletas no es de tu equipo.");
+    throw new ForbiddenError("Alguno de esos atletas no es un socio activo de tu club.");
   }
 
   let structure: WorkoutStructure;
@@ -141,9 +150,9 @@ export async function duplicateScheduledWorkout(
 
   const targetAthleteId = input.athleteMembershipId ?? source.athleteMembershipId;
   const targetAthlete = await prisma.teamMembership.findFirst({
-    where: { id: targetAthleteId, teamId: membership.teamId, role: "ATHLETE" },
+    where: { id: targetAthleteId, teamId: membership.teamId, role: "ATHLETE", status: "ACTIVE" },
   });
-  if (!targetAthlete) throw new ForbiddenError("Ese atleta no es de tu equipo.");
+  if (!targetAthlete) throw new ForbiddenError("Ese atleta no es un socio activo de tu club.");
 
   const copy = await prisma.scheduledWorkout.create({
     data: {

@@ -134,9 +134,9 @@ export async function markAttendance(
   const { membership } = await assertSessionOfMyClub(sessionId);
 
   const athlete = await prisma.teamMembership.findFirst({
-    where: { id: membershipId, teamId: membership.teamId, role: "ATHLETE" },
+    where: { id: membershipId, teamId: membership.teamId, role: "ATHLETE", status: "ACTIVE" },
   });
-  if (!athlete) throw new ForbiddenError("Ese socio no es de tu club.");
+  if (!athlete) throw new ForbiddenError("Ese socio no es un socio activo de tu club.");
 
   await prisma.sessionAttendance.upsert({
     where: { sessionId_membershipId: { sessionId, membershipId } },

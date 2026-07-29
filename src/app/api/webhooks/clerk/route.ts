@@ -90,9 +90,23 @@ export async function POST(req: Request) {
       const user = await prisma.user.findUnique({ where: { clerkUserId: public_user_data.user_id } });
       if (!team || !user) break;
 
+      // La membresía se marca REMOVED en vez de borrarse: su historial de
+      // entrenamientos y asistencia sigue siendo del club.
       await prisma.teamMembership.updateMany({
         where: { teamId: team.id, userId: user.id },
         data: { status: "REMOVED" },
+      });
+
+      // La pertenencia a grupos SÍ se borra. Si se queda, el grupo sigue
+      // contando y seleccionando a alguien que ya no está en el club: el chip
+      // dice "Avanzados (8)" cuando solo 7 son visibles, y al guardar el grupo
+      // la acción rechaza el id que la propia pantalla mandó.
+      const memberships = await prisma.teamMembership.findMany({
+        where: { teamId: team.id, userId: user.id },
+        select: { id: true },
+      });
+      await prisma.trainingGroupMember.deleteMany({
+        where: { membershipId: { in: memberships.map((m) => m.id) } },
       });
       break;
     }

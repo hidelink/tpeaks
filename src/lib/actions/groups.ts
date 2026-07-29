@@ -102,20 +102,23 @@ export async function deleteTrainingGroup(groupId: string) {
 export async function setTrainingGroupMembers(groupId: string, membershipIds: string[]) {
   const { membership } = await assertGroupOfMyClub(groupId);
 
-  // Solo socios activos del mismo club — filtrar en la base y no confiar en
-  // los ids que llegan del formulario.
-  const valid = await prisma.teamMembership.findMany({
-    where: {
-      id: { in: membershipIds },
-      teamId: membership.teamId,
-      role: "ATHLETE",
-      status: "ACTIVE",
-    },
-    select: { id: true },
+  // Dos comprobaciones distintas a propósito:
+  //
+  // 1. Pertenecer al club se exige y se rechaza — un id de otro club es un
+  //    intento de tocar datos ajenos.
+  // 2. Estar activo NO se rechaza, se filtra. Antes se exigía, y bastaba con
+  //    que un socio del grupo se diera de baja para que la pantalla mandara su
+  //    id y la acción lanzara "no es de tu club": el grupo quedaba imposible de
+  //    guardar y el mensaje además era falso. Un socio dado de baja simplemente
+  //    no forma parte del grupo.
+  const inClub = await prisma.teamMembership.findMany({
+    where: { id: { in: membershipIds }, teamId: membership.teamId, role: "ATHLETE" },
+    select: { id: true, status: true },
   });
-  if (valid.length !== membershipIds.length) {
+  if (inClub.length !== membershipIds.length) {
     throw new ForbiddenError("Alguno de esos socios no es de tu club.");
   }
+  const valid = inClub.filter((m) => m.status === "ACTIVE");
 
   await prisma.$transaction([
     prisma.trainingGroupMember.deleteMany({ where: { groupId } }),

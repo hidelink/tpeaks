@@ -13,12 +13,26 @@ export default async function CoachSessionsPage() {
   const [upcoming, past, groups, activeAthleteCount] = await Promise.all([
     prisma.clubSession.findMany({
       where: { teamId: membership.teamId, date: { gte: today } },
-      include: { group: { include: { members: true } }, attendance: true },
+      include: {
+        // Solo activos: el conteo de convocados tiene que coincidir con la
+        // lista que muestra el detalle.
+        group: {
+          include: { members: { where: { membership: { status: "ACTIVE", role: "ATHLETE" } } } },
+        },
+        attendance: true,
+      },
       orderBy: [{ date: "asc" }, { startTime: "asc" }],
     }),
     prisma.clubSession.findMany({
       where: { teamId: membership.teamId, date: { lt: today } },
-      include: { group: { include: { members: true } }, attendance: true },
+      include: {
+        // Solo activos: el conteo de convocados tiene que coincidir con la
+        // lista que muestra el detalle.
+        group: {
+          include: { members: { where: { membership: { status: "ACTIVE", role: "ATHLETE" } } } },
+        },
+        attendance: true,
+      },
       orderBy: [{ date: "desc" }, { startTime: "desc" }],
       take: 10,
     }),

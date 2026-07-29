@@ -9,7 +9,14 @@ export default async function CoachGroupsPage() {
   const [groups, athletes] = await Promise.all([
     prisma.trainingGroup.findMany({
       where: { teamId: membership.teamId },
-      include: { members: { select: { membershipId: true } } },
+      include: {
+        // Solo socios activos: un socio dado de baja seguiría contando en el
+        // grupo y la pantalla no podría mostrarlo para quitarlo.
+        members: {
+          where: { membership: { status: "ACTIVE", role: "ATHLETE" } },
+          select: { membershipId: true },
+        },
+      },
       orderBy: { name: "asc" },
     }),
     prisma.teamMembership.findMany({

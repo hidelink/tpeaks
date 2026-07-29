@@ -23,7 +23,14 @@ export default async function NewScheduledWorkoutPage({
     }),
     prisma.trainingGroup.findMany({
       where: { teamId: membership.teamId },
-      include: { members: { select: { membershipId: true } } },
+      include: {
+        // Solo activos: el chip debe contar y seleccionar exactamente a los
+        // socios que se ven en la lista de abajo.
+        members: {
+          where: { membership: { status: "ACTIVE", role: "ATHLETE" } },
+          select: { membershipId: true },
+        },
+      },
       orderBy: { name: "asc" },
     }),
   ]);

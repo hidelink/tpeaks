@@ -8,7 +8,11 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: ["src/lib/**/*.ts"],
-      exclude: ["src/lib/**/*.test.ts", "src/lib/actions/**", "src/lib/prisma.ts"],
+      // src/lib/actions/** estuvo excluido y eso escondía el problema: la capa
+      // donde viven autorización, validación e integridad de datos no tenía un
+      // solo test, y el porcentaje global se veía sano igual. Medirla hace
+      // visible lo que falta.
+      exclude: ["src/lib/**/*.test.ts", "src/lib/prisma.ts"],
     },
   },
   resolve: {
