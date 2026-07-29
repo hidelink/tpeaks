@@ -138,13 +138,29 @@ Las tres capas se aplican juntas, y solo una es seguridad:
 3. **Server Action** — `requireCapability` lanza `ForbiddenError`. **Esta es la única que es
    seguridad**; las otras dos existen para no mostrar un formulario que va a fallar al guardar.
 
-En Clerk, quien crea la organización queda como `ADMIN` de su club. Después se ajusta con:
+### Quién es qué, y cómo se cambia
+
+En Clerk, quien crea la organización queda como `ADMIN` de su club. **A todo invitado se le manda
+como `org:member`, así que entra siempre como Socio** — el rol de club no se elige al invitar
+(todavía; ver el backlog). Para nombrar un Coach o un Admin, cámbiale el rol desde **Socios y
+staff** una vez que haya aceptado.
+
+Dos cosas del cambio de rol que no son obvias:
+
+- **Requiere `MANAGE_CLUB`, no `MANAGE_MEMBERS`**, aunque el selector viva en la pantalla de
+  socios. `MANAGE_MEMBERS` lo tiene también el Coach: repartir roles ahí dejaría que cualquier
+  coach se ascendiera a Admin.
+- **No se puede dejar el club sin ningún Admin.** Un club sin Admin no tiene a nadie que pueda
+  nombrar otro Admin — es un estado del que no se sale desde el producto.
+
+Y desde la terminal, si te quedas fuera:
 
 ```bash
 npx tsx scripts/set-role.ts email@ejemplo.com COACH
 ```
 
-Sin argumentos lista los roles actuales. Los roles se ven en **Socios y staff**.
+Sin argumentos lista los roles actuales. El script no tiene la protección del último Admin: es
+justo la salida de emergencia para cuando la interfaz te dejó fuera.
 
 ### Grupos de entrenamiento
 

@@ -609,6 +609,32 @@ estaba excluido del reporte de cobertura, así que el 91% global se veía sano m
 autorización, validación e integridad no se medía. Se quitó la exclusión y se escribieron los
 primeros tests de acciones, con regresiones para estos bugs.
 
+### Cambiar el rol desde la pantalla de socios
+
+Hasta aquí el rol solo se podía cambiar con un script: `inviteAthlete` manda `org:member` quemado,
+así que **todo invitado entra como Socio** y no había forma de dar de alta un coach desde el
+producto. Para un club con tres coaches eso no se sostiene.
+
+Se eligió resolver primero el cambio de rol y no la elección al invitar, porque el cambio hace
+falta de todas formas — la gente cambia de rol, un coach deja el club — mientras que elegir al
+invitar solo cubre el alta y encima necesita plomería para arrastrar el rol hasta que acepten
+(las invitaciones de Clerk aceptan `publicMetadata`, verificado, pero el evento de membresía no la
+trae; haría falta leerla aparte o guardar una invitación pendiente propia). Elegir al invitar
+queda como siguiente paso.
+
+Dos decisiones:
+
+- **`MANAGE_CLUB`, no `MANAGE_MEMBERS`.** El selector vive en la pantalla de socios, así que lo
+  natural habría sido reusar su capacidad — pero `MANAGE_MEMBERS` lo tiene también el Coach, y eso
+  deja que cualquier coach se ascienda a Admin. Gestionar socios y repartir poder son cosas
+  distintas aunque compartan pantalla.
+- **No se puede dejar el club sin ningún Admin**, ni siquiera degradándose uno mismo. Sin Admin no
+  queda nadie que pueda nombrar a otro: es un estado del que no se sale desde el producto.
+  `scripts/set-role.ts` sí lo permite a propósito — es la salida de emergencia.
+
+De paso, al dejar de ser socio se borra su pertenencia a los grupos de entrenamiento. Es el mismo
+dato zombi que ya causó tres síntomas cuando alguien se daba de baja.
+
 ### El cuarto bug de zona horaria, y el de fondo
 
 Los tres anteriores eran sobre **leer** fechas. Este es sobre **dónde está anclado el ahora**, y

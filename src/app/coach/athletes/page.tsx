@@ -3,7 +3,8 @@ import { clerkClient } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { InviteAthleteForm } from "./InviteAthleteForm";
 import { RevokeInvitationButton } from "./RevokeInvitationButton";
-import { ROLE_LABELS, STAFF_ROLES } from "@/lib/roles";
+import { ROLE_LABELS, STAFF_ROLES, can } from "@/lib/roles";
+import { RoleSelect } from "./RoleSelect";
 import { requirePageCapability } from "@/lib/page-guards";
 
 export default async function CoachAthletesPage() {
@@ -23,6 +24,10 @@ export default async function CoachAthletesPage() {
   ]);
 
   // De más autoridad a menos, no por fecha de alta.
+  // Solo un Admin reparte roles: MANAGE_MEMBERS lo tiene también el Coach, y
+  // eso dejaría que un coach se ascendiera solo. Ver actions/members.ts.
+  const canAssignRoles = can(membership.role, "MANAGE_CLUB");
+
   const staffOrdered = [...staff].sort(
     (a, b) => STAFF_ROLES.indexOf(a.role) - STAFF_ROLES.indexOf(b.role),
   );
@@ -58,9 +63,13 @@ export default async function CoachAthletesPage() {
                 </p>
                 <p className="text-sm text-zinc-500">{m.user.email}</p>
               </div>
-              <span className="rounded-full border border-[var(--team-accent)] px-2 py-1 text-xs font-medium">
-                {ROLE_LABELS[m.role]}
-              </span>
+              {canAssignRoles ? (
+                <RoleSelect membershipId={m.id} role={m.role} isSelf={m.id === membership.id} />
+              ) : (
+                <span className="rounded-full border border-[var(--team-accent)] px-2 py-1 text-xs font-medium">
+                  {ROLE_LABELS[m.role]}
+                </span>
+              )}
             </li>
           ))}
         </ul>
@@ -105,6 +114,9 @@ export default async function CoachAthletesPage() {
                   <span className="rounded-full bg-zinc-100 px-2 py-1 text-xs">
                     {a.status === "ACTIVE" ? "Activo" : a.status === "INVITED" ? "Invitado" : "Removido"}
                   </span>
+                  {canAssignRoles && a.status === "ACTIVE" && (
+                    <RoleSelect membershipId={a.id} role={a.role} isSelf={false} />
+                  )}
                   <Link href={`/coach/athletes/${a.id}`} className="text-sm underline">
                     Ver perfil
                   </Link>
