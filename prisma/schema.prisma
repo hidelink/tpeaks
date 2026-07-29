@@ -103,6 +103,7 @@ model Team {
   updatedAt DateTime @updatedAt
 
   memberships  TeamMembership[]
+  invitations  ClubInvitation[]
   templates    WorkoutTemplate[]
   scheduled    ScheduledWorkout[]
   groups       TrainingGroup[]
@@ -172,6 +173,33 @@ model AthleteProfile {
 /// Grupo de entrenamiento dentro de un club: "avanzados", "principiantes",
 /// "grupo de trail". Un club chico puede no usarlos; uno de 40 socios los
 /// necesita para no asignar de uno en uno.
+/// Invitación pendiente, con el rol que tendrá la persona al aceptar.
+///
+/// Clerk manda el correo y maneja la aceptación, pero solo distingue
+/// admin/member a nivel organización — nuestros roles de club no caben ahí, y
+/// tampoco queremos darle poderes de organización de Clerk a un coach. Así que
+/// el rol prometido se guarda aquí y se aplica al crear la membresía.
+///
+/// Se eligió tabla propia sobre publicMetadata de la invitación de Clerk (que
+/// sí existe) porque el evento de membresía no la trae de vuelta, y porque el
+/// fallback sync-on-read de getCurrentMembership no pasa por webhooks: con
+/// tabla propia los dos caminos leen lo mismo.
+model ClubInvitation {
+  id                String         @id @default(cuid())
+  teamId            String
+  email             String
+  role              MembershipRole
+  /// Para poder revocarla en Clerk y para conciliar la lista que Clerk expone.
+  clerkInvitationId String?
+  createdAt         DateTime       @default(now())
+
+  team Team @relation(fields: [teamId], references: [id])
+
+  /// Una invitación pendiente por correo y club: reinvitar reemplaza el rol
+  /// prometido en vez de dejar dos filas que se contradicen.
+  @@unique([teamId, email])
+}
+
 model TrainingGroup {
   id          String   @id @default(cuid())
   teamId      String

@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { Webhook } from "svix";
 import { prisma } from "@/lib/prisma";
 import {
-  mapOrgRole,
+  resolveInitialRole,
   upsertMembership,
   upsertTeamFromClerkOrg,
   upsertUserFromClerk,
@@ -80,7 +80,9 @@ export async function POST(req: Request) {
       const user = await prisma.user.findUnique({ where: { clerkUserId: public_user_data.user_id } });
       if (!team || !user) break;
 
-      await upsertMembership(team.id, user.id, mapOrgRole(role));
+      // El rol sale de la invitación del club si existe (ahí quedó lo que
+      // eligió quien invitó); si no, del rol de Clerk. Ver clerk-sync.ts.
+      await upsertMembership(team.id, user.id, await resolveInitialRole(team.id, user.email, role));
       break;
     }
 

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { clerkClient } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
-import { InviteAthleteForm } from "./InviteAthleteForm";
+import { InviteMemberForm } from "./InviteMemberForm";
 import { RevokeInvitationButton } from "./RevokeInvitationButton";
 import { ROLE_LABELS, STAFF_ROLES, can } from "@/lib/roles";
 import { RoleSelect } from "./RoleSelect";
@@ -10,7 +10,7 @@ import { requirePageCapability } from "@/lib/page-guards";
 export default async function CoachAthletesPage() {
   const membership = await requirePageCapability("MANAGE_MEMBERS");
 
-  const [athletes, staff, client] = await Promise.all([
+  const [athletes, staff, client, clubInvitations] = await Promise.all([
     prisma.teamMembership.findMany({
       where: { teamId: membership.teamId, role: "ATHLETE" },
       include: { user: true, groups: { include: { group: true } } },
@@ -21,7 +21,12 @@ export default async function CoachAthletesPage() {
       include: { user: true },
     }),
     clerkClient(),
+    prisma.clubInvitation.findMany({ where: { teamId: membership.teamId } }),
   ]);
+
+  // El rol que tendrá cada invitado al aceptar. Clerk solo sabe el email, así
+  // que el rol prometido sale de nuestra tabla (ver actions/invite.ts).
+  const promisedRole = new Map(clubInvitations.map((i) => [i.email, i.role]));
 
   // De más autoridad a menos, no por fecha de alta.
   // Solo un Admin reparte roles: MANAGE_MEMBERS lo tiene también el Coach, y
@@ -41,7 +46,7 @@ export default async function CoachAthletesPage() {
     <div className="flex flex-col gap-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Socios y staff</h1>
-        <InviteAthleteForm />
+        <InviteMemberForm canInviteStaff={canAssignRoles} />
       </div>
 
       <div>
@@ -81,7 +86,13 @@ export default async function CoachAthletesPage() {
           <ul className="divide-y divide-zinc-200">
             {pendingInvitations.map((inv) => (
               <li key={inv.id} className="flex items-center justify-between py-3">
-                <span className="text-sm">{inv.emailAddress}</span>
+                <span className="text-sm">
+                  {inv.emailAddress}
+                  <span className="ml-2 text-xs text-zinc-500">
+                    entrará como{" "}
+                    {ROLE_LABELS[promisedRole.get(inv.emailAddress.toLowerCase()) ?? "ATHLETE"]}
+                  </span>
+                </span>
                 <RevokeInvitationButton invitationId={inv.id} />
               </li>
             ))}

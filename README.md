@@ -140,12 +140,25 @@ Las tres capas se aplican juntas, y solo una es seguridad:
 
 ### Quién es qué, y cómo se cambia
 
-En Clerk, quien crea la organización queda como `ADMIN` de su club. **A todo invitado se le manda
-como `org:member`, así que entra siempre como Socio** — el rol de club no se elige al invitar
-(todavía; ver el backlog). Para nombrar un Coach o un Admin, cámbiale el rol desde **Socios y
-staff** una vez que haya aceptado.
+En Clerk, quien crea la organización queda como `ADMIN` de su club. Al invitar a alguien más,
+**eliges su rol en el formulario**: el rol prometido se guarda en `ClubInvitation` y se aplica
+cuando la persona acepta (`resolveInitialRole`). También puedes cambiarlo después desde **Socios y
+staff**.
 
-Dos cosas del cambio de rol que no son obvias:
+En Clerk **todos entran como `org:member`, incluidos los Admin de club.** El rol de Clerk solo
+gobierna poderes sobre la organización de Clerk (editarla, expulsar miembros); nuestros roles viven
+en nuestra tabla. Darle `org:admin` a un coach le daría poderes que no le corresponden y que no
+controlamos.
+
+Se eligió tabla propia sobre `publicMetadata` de la invitación de Clerk (que sí existe) porque el
+evento de membresía no la trae de vuelta, y porque el fallback sync-on-read de
+`getCurrentMembership` no pasa por webhooks — con tabla propia los dos caminos leen lo mismo.
+
+Tres cosas de los roles que no son obvias:
+
+- **Invitar como Socio pide `MANAGE_MEMBERS`; invitar como Coach o Admin pide `MANAGE_CLUB`.** Sin
+  esa distinción, un coach podría invitar su propio correo alterno como Admin y ascenderse por la
+  puerta de atrás.
 
 - **Requiere `MANAGE_CLUB`, no `MANAGE_MEMBERS`**, aunque el selector viva en la pantalla de
   socios. `MANAGE_MEMBERS` lo tiene también el Coach: repartir roles ahí dejaría que cualquier

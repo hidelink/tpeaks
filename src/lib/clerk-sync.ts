@@ -42,6 +42,33 @@ export function upsertUserFromClerk(
   });
 }
 
+/**
+ * Con qué rol entra alguien al aceptar una invitación.
+ *
+ * Primero manda la invitación del club (ClubInvitation): es donde quedó
+ * guardado el rol que eligió quien invitó. Si no hay invitación —porque la
+ * persona fue agregada directo en el dashboard de Clerk, o porque es quien creó
+ * la organización— se cae al rol de Clerk vía mapOrgRole.
+ *
+ * La invitación se consume: una vez que la persona está dentro, el rol lo
+ * gobierna TeamMembership y dejar la fila haría que una reinvitación vieja
+ * pudiera reaparecer.
+ */
+export async function resolveInitialRole(
+  teamId: string,
+  email: string,
+  orgRole: string | null | undefined,
+): Promise<MembershipRole> {
+  const invitation = await prisma.clubInvitation.findUnique({
+    where: { teamId_email: { teamId, email: email.toLowerCase() } },
+  });
+
+  if (!invitation) return mapOrgRole(orgRole);
+
+  await prisma.clubInvitation.delete({ where: { id: invitation.id } });
+  return invitation.role;
+}
+
 export function upsertMembership(teamId: string, userId: string, role: MembershipRole) {
   return prisma.teamMembership.upsert({
     where: { teamId_userId: { teamId, userId } },
@@ -79,5 +106,6 @@ export async function syncMembershipFromClerk(
   const org = await client.organizations.getOrganization({ organizationId: orgId });
   const team = await upsertTeamFromClerkOrg(orgId, org.name, org.slug);
 
-  return upsertMembership(team.id, dbUser.id, mapOrgRole(orgRole));
+  const role = await resolveInitialRole(team.id, email, orgRole);
+  return upsertMembership(team.id, dbUser.id, role);
 }

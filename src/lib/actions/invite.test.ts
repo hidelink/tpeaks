@@ -19,62 +19,147 @@ vi.mock("@/lib/permissions", async () => {
   return { ...actual, requireCapability: vi.fn() };
 });
 
-import { requireCapability } from "@/lib/permissions";
-import { inviteAthlete, revokeInvitation } from "./invite";
+vi.mock("@/lib/prisma", () => ({
+  prisma: {
+    teamMembership: { findFirst: vi.fn() },
+    clubInvitation: { upsert: vi.fn(), deleteMany: vi.fn() },
+  },
+}));
+
+import { prisma } from "@/lib/prisma";
+import { requireCapability, ForbiddenError } from "@/lib/permissions";
+import { inviteMember, revokeInvitation } from "./invite";
 
 const requireCapabilityMock = requireCapability as unknown as ReturnType<typeof vi.fn>;
+const findMembershipMock = prisma.teamMembership.findFirst as unknown as ReturnType<typeof vi.fn>;
+const upsertInvitationMock = prisma.clubInvitation.upsert as unknown as ReturnType<typeof vi.fn>;
+const deleteInvitationsMock = prisma.clubInvitation.deleteMany as unknown as ReturnType<typeof vi.fn>;
+
+const ACTOR = {
+  teamId: "team_1",
+  team: { clerkOrgId: "org_1" },
+  user: { clerkUserId: "clerk_admin" },
+};
 
 beforeEach(() => {
   vi.resetAllMocks();
-  requireCapabilityMock.mockResolvedValue({
-    teamId: "team_1",
-    team: { clerkOrgId: "org_1" },
-    user: { clerkUserId: "clerk_coach" },
-  });
+  requireCapabilityMock.mockResolvedValue(ACTOR);
+  findMembershipMock.mockResolvedValue(null);
+  createInvitationMock.mockResolvedValue({ id: "inv_clerk_1" });
 });
 
-describe("inviteAthlete", () => {
-  it("exige la capacidad de gestionar socios", async () => {
-    await inviteAthlete("nuevo@ejemplo.com");
+describe("inviteMember — permisos", () => {
+  it("invitar un socio pide MANAGE_MEMBERS", async () => {
+    await inviteMember("nuevo@ejemplo.com", "ATHLETE");
     expect(requireCapabilityMock).toHaveBeenCalledWith("MANAGE_MEMBERS");
   });
 
-  it("invita siempre a la organización del club de quien invita", async () => {
-    await inviteAthlete("nuevo@ejemplo.com");
+  // La trampa del cambio: MANAGE_MEMBERS lo tiene también el Coach, así que si
+  // invitar staff viviera ahí, un coach podría invitar su propio correo alterno
+  // como Admin y ascenderse por la puerta de atrás.
+  it("invitar un coach o un admin pide MANAGE_CLUB, no MANAGE_MEMBERS", async () => {
+    await inviteMember("coach@ejemplo.com", "COACH");
+    expect(requireCapabilityMock).toHaveBeenCalledWith("MANAGE_CLUB");
+
+    requireCapabilityMock.mockClear();
+    await inviteMember("admin@ejemplo.com", "ADMIN");
+    expect(requireCapabilityMock).toHaveBeenCalledWith("MANAGE_CLUB");
+  });
+
+  it("si no tiene la capacidad, no se manda ninguna invitación", async () => {
+    requireCapabilityMock.mockRejectedValue(new ForbiddenError());
+    await expect(inviteMember("coach@ejemplo.com", "COACH")).rejects.toThrow(ForbiddenError);
+    expect(createInvitationMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("inviteMember — invitación en Clerk", () => {
+  it("invita a la organización del club de quien invita", async () => {
+    await inviteMember("nuevo@ejemplo.com", "ATHLETE");
     expect(createInvitationMock).toHaveBeenCalledWith(
       expect.objectContaining({ organizationId: "org_1", emailAddress: "nuevo@ejemplo.com" }),
     );
   });
 
-  // org:member es lo que clerk-sync mapea a ATHLETE. Si se invitara como
-  // org:admin, el socio entraría con permisos de Admin del club.
-  it("invita como org:member, nunca como org:admin", async () => {
-    await inviteAthlete("nuevo@ejemplo.com");
+  // Nuestros roles viven en nuestra tabla. org:admin daría poderes sobre la
+  // organización de Clerk (editarla, expulsar) que no controlamos.
+  it("en Clerk TODOS entran como org:member, incluso un Admin de club", async () => {
+    await inviteMember("admin@ejemplo.com", "ADMIN");
     expect(createInvitationMock.mock.calls[0][0].role).toBe("org:member");
   });
 
+  it("normaliza el email: recorta y baja a minúsculas", async () => {
+    await inviteMember("  Nuevo@Ejemplo.COM  ", "ATHLETE");
+    expect(createInvitationMock.mock.calls[0][0].emailAddress).toBe("nuevo@ejemplo.com");
+  });
+
   it("rechaza un email inválido antes de llamar a Clerk", async () => {
-    await expect(inviteAthlete("no-es-un-email")).rejects.toThrow(/correo/i);
-    await expect(inviteAthlete("   ")).rejects.toThrow(/correo/i);
+    await expect(inviteMember("no-es-un-email", "ATHLETE")).rejects.toThrow(/correo/i);
+    expect(createInvitationMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("inviteMember — rol prometido", () => {
+  it("guarda el rol elegido para aplicarlo cuando la persona acepte", async () => {
+    await inviteMember("coach@ejemplo.com", "COACH");
+
+    const call = upsertInvitationMock.mock.calls[0][0];
+    expect(call.create).toMatchObject({
+      teamId: "team_1",
+      email: "coach@ejemplo.com",
+      role: "COACH",
+      clerkInvitationId: "inv_clerk_1",
+    });
+  });
+
+  it("reinvitar reemplaza el rol prometido en vez de dejar dos filas", async () => {
+    await inviteMember("ana@ejemplo.com", "ADMIN");
+
+    const call = upsertInvitationMock.mock.calls[0][0];
+    expect(call.where).toEqual({ teamId_email: { teamId: "team_1", email: "ana@ejemplo.com" } });
+    expect(call.update).toMatchObject({ role: "ADMIN" });
+  });
+});
+
+describe("inviteMember — ya está dentro", () => {
+  it("rechaza invitar a alguien que ya es miembro, y sugiere cambiarle el rol", async () => {
+    findMembershipMock.mockResolvedValue({ id: "m1", role: "COACH" });
+
+    await expect(inviteMember("ya@esta.com", "ADMIN")).rejects.toThrow(/ya está en tu club/);
     expect(createInvitationMock).not.toHaveBeenCalled();
   });
 
-  it("normaliza el email: recorta espacios y baja a minúsculas", async () => {
-    await inviteAthlete("  Nuevo@Ejemplo.COM  ");
-    expect(createInvitationMock.mock.calls[0][0].emailAddress).toBe("nuevo@ejemplo.com");
+  it("a alguien dado de baja sí se le puede volver a invitar", async () => {
+    // La query excluye REMOVED, así que devuelve null y la invitación procede.
+    findMembershipMock.mockResolvedValue(null);
+    await expect(inviteMember("volvio@ejemplo.com", "ATHLETE")).resolves.toBeUndefined();
+
+    expect(findMembershipMock.mock.calls[0][0].where).toMatchObject({
+      teamId: "team_1",
+      status: { not: "REMOVED" },
+    });
   });
 });
 
 describe("revokeInvitation", () => {
   it("exige la capacidad de gestionar socios", async () => {
-    await revokeInvitation("inv_1");
+    await revokeInvitation("inv_clerk_1");
     expect(requireCapabilityMock).toHaveBeenCalledWith("MANAGE_MEMBERS");
   });
 
-  it("revoca acotado a la organización del club, no solo por id de invitación", async () => {
-    await revokeInvitation("inv_1");
+  it("revoca en Clerk acotado a la organización del club", async () => {
+    await revokeInvitation("inv_clerk_1");
     expect(revokeInvitationMock).toHaveBeenCalledWith(
-      expect.objectContaining({ organizationId: "org_1", invitationId: "inv_1" }),
+      expect.objectContaining({ organizationId: "org_1", invitationId: "inv_clerk_1" }),
     );
+  });
+
+  // Si la fila se queda, esa persona podría entrar después por otra vía y
+  // recibir el rol de una invitación ya revocada.
+  it("borra también el rol prometido, acotado al club", async () => {
+    await revokeInvitation("inv_clerk_1");
+    expect(deleteInvitationsMock).toHaveBeenCalledWith({
+      where: { teamId: "team_1", clerkInvitationId: "inv_clerk_1" },
+    });
   });
 });

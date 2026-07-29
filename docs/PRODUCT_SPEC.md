@@ -615,12 +615,28 @@ Hasta aquí el rol solo se podía cambiar con un script: `inviteAthlete` manda `
 así que **todo invitado entra como Socio** y no había forma de dar de alta un coach desde el
 producto. Para un club con tres coaches eso no se sostiene.
 
-Se eligió resolver primero el cambio de rol y no la elección al invitar, porque el cambio hace
-falta de todas formas — la gente cambia de rol, un coach deja el club — mientras que elegir al
-invitar solo cubre el alta y encima necesita plomería para arrastrar el rol hasta que acepten
-(las invitaciones de Clerk aceptan `publicMetadata`, verificado, pero el evento de membresía no la
-trae; haría falta leerla aparte o guardar una invitación pendiente propia). Elegir al invitar
-queda como siguiente paso.
+Se resolvió primero el cambio de rol y después la elección al invitar, en ese orden, porque el
+cambio hace falta de todas formas — la gente cambia de rol, un coach deja el club — mientras que
+elegir al invitar solo cubre el alta.
+
+**Elegir el rol al invitar** (segundo paso, ya construido): el rol prometido se guarda en
+`ClubInvitation` y se aplica al crear la membresía (`resolveInitialRole`). Se eligió tabla propia
+sobre `publicMetadata` de la invitación de Clerk —que sí existe, verificado en los tipos del SDK—
+porque el evento de membresía no la trae de vuelta y porque el fallback sync-on-read de
+`getCurrentMembership` no pasa por webhooks: con tabla propia los dos caminos leen lo mismo, y de
+paso la pantalla puede mostrar con qué rol va a entrar cada invitación pendiente.
+
+En Clerk **todos entran como `org:member`, incluidos los Admin de club.** El rol de Clerk gobierna
+poderes sobre la organización de Clerk (editarla, expulsar miembros), no los nuestros; dárselo a un
+coach sería repartir permisos que no controlamos.
+
+Y el mismo riesgo de escalación aparece al invitar: **invitar como Socio pide `MANAGE_MEMBERS`,
+invitar como Coach o Admin pide `MANAGE_CLUB`**, porque un coach podría invitar su propio correo
+alterno como Admin. La invitación se consume al aceptarse y se borra al revocarse, para que un rol
+prometido viejo no reaparezca si esa persona entra después por otra vía.
+
+De paso se renombró el vocabulario: "invitar atleta" pasó a "invitar" (miembro), porque desde que
+se puede invitar coaches el nombre viejo describía mal lo que hace.
 
 Dos decisiones:
 
