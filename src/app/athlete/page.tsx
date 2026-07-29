@@ -11,13 +11,15 @@ import { TrainingLoadChart } from "@/components/TrainingLoadChart";
 import { TrainingPacesList } from "@/components/TrainingPacesList";
 import { trainingPaces } from "@/lib/vdot";
 import { RUNNING_KM_SPORTS } from "@/lib/sports";
+import { clubToday } from "@/lib/club-time";
 
 export default async function AthleteDashboardPage() {
   const membership = await getCurrentMembership();
   if (!membership) return null;
   await assertAthleteTeamAccess(membership.teamId);
 
-  const { start, end } = getCurrentWeekRange();
+  const today = clubToday(membership.team.timezone);
+  const { start, end } = getCurrentWeekRange(today);
 
   const [weekWorkouts, nextWorkout, loadSeries, profile] = await Promise.all([
     prisma.scheduledWorkout.findMany({
@@ -31,11 +33,11 @@ export default async function AthleteDashboardPage() {
       where: {
         athleteMembershipId: membership.id,
         status: "PLANNED",
-        date: { gte: todayAsUtcMidnight() },
+        date: { gte: todayAsUtcMidnight(today) },
       },
       orderBy: { date: "asc" },
     }),
-    getWeeklyLoadSeries(membership.id),
+    getWeeklyLoadSeries(membership.id, today),
     // Solo lectura: el resultado de carrera del que salen estos ritmos lo
     // captura el coach, no el atleta.
     prisma.athleteProfile.findUnique({

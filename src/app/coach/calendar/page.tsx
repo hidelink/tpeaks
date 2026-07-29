@@ -15,6 +15,7 @@ import { toLocalCalendarDate, toQueryBoundary } from "@/lib/calendar-date";
 import { CalendarFilterBar } from "@/components/CalendarFilterBar";
 import { sportMeta } from "@/lib/sports";
 import { can } from "@/lib/roles";
+import { clubToday } from "@/lib/club-time";
 
 /**
  * Vista semanal o mensual (?view=week|month), con navegación y filtros por
@@ -33,7 +34,8 @@ export default async function CoachCalendarPage({
   // El calendario lo ve cualquiera del staff, pero asignar es de quien entrena.
   const canTrain = can(membership.role, "MANAGE_TRAINING");
 
-  const reference = parseDateParam(date);
+  const today = clubToday(membership.team.timezone);
+  const reference = parseDateParam(date, today);
 
   const range =
     view === "week"
@@ -138,7 +140,7 @@ export default async function CoachCalendarPage({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-7">
         {days.map((day) => {
           const dateParam = format(day, "yyyy-MM-dd");
-          const isToday = isSameDay(day, new Date());
+          const isToday = isSameDay(day, today);
           const dimmed = monthInfo ? !isSameMonth(day, monthInfo.monthStart) : false;
           const dayWorkouts = workouts.filter((w) => isSameDay(toLocalCalendarDate(w.date), day));
           const visible = view === "month" ? dayWorkouts.slice(0, 2) : dayWorkouts;

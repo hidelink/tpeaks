@@ -215,6 +215,25 @@ devolvió 500 con `(EMAXCONNSESSION) max clients reached in session mode`.
 
 Si clonas esto y ves 500 en todas las rutas, revisa primero el puerto de `DATABASE_URL`.
 
+### "Hoy" es el día del club, no el del servidor
+
+Todo el cálculo de calendario usa funciones locales de date-fns, que leen la zona horaria del
+**proceso**. En local eso era `America/Mexico_City` y todo cuadraba; **en Vercel el proceso corre
+en UTC**. A partir de las 18:00 de México el servidor ya creía que era mañana, y con eso el
+cumplimiento contaba como vencido lo de hoy, la comparación de carga metía un día de más, "próximo
+entrenamiento" se saltaba el de hoy y el calendario resaltaba el día equivocado.
+
+Se detectó porque el dashboard mostraba **−72%** donde el mismo cálculo en local daba **+53%**:
+eran dos días distintos, no dos fórmulas distintas.
+
+La zona vive en `Team.timezone` (default `America/Mexico_City`) porque es del **club**: uno en
+Bogotá y otro en Ciudad de México cierran su día en momentos distintos. `clubToday(timezone)`
+devuelve ese día, y `getCurrentWeekRange`, `parseDateParam`, `todayAsUtcMidnight` y
+`getWeeklyLoadSeries` ahora **exigen** que se lo pases — el default `= new Date()` era justo lo
+que escondía el problema, y volverlo obligatorio hizo que el compilador señalara los nueve sitios.
+
+Si escribes código que necesite "hoy", nunca uses `new Date()`: usa `clubToday(team.timezone)`.
+
 ### Nota: el cumplimiento semanal medía otra cosa
 
 `Cumplimiento semanal` dividía entre **todos** los entrenamientos de la semana, incluidos los de

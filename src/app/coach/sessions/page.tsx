@@ -5,10 +5,12 @@ import { prisma } from "@/lib/prisma";
 import { requirePageCapability } from "@/lib/page-guards";
 import { toLocalCalendarDate, todayAsUtcMidnight } from "@/lib/calendar-date";
 import { NewSessionForm } from "./NewSessionForm";
+import { clubToday } from "@/lib/club-time";
 
 export default async function CoachSessionsPage() {
   const membership = await requirePageCapability("MANAGE_TRAINING");
-  const today = todayAsUtcMidnight();
+  const clubDay = clubToday(membership.team.timezone);
+  const today = todayAsUtcMidnight(clubDay);
 
   const [upcoming, past, groups, activeAthleteCount] = await Promise.all([
     prisma.clubSession.findMany({
@@ -100,7 +102,7 @@ export default async function CoachSessionsPage() {
       <div className="rounded-xl border border-zinc-200 p-4">
         <NewSessionForm
           groups={groups.map((g) => ({ id: g.id, name: g.name }))}
-          defaultDate={format(new Date(), "yyyy-MM-dd")}
+          defaultDate={format(clubDay, "yyyy-MM-dd")}
         />
       </div>
 

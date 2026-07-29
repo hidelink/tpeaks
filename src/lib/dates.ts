@@ -11,8 +11,15 @@ import {
   parseISO,
 } from "date-fns";
 
-/** Semana lunes-domingo, usada para las métricas de cumplimiento semanal. */
-export function getCurrentWeekRange(reference = new Date()) {
+/**
+ * Semana lunes-domingo, usada para las métricas de cumplimiento semanal.
+ *
+ * `reference` es obligatorio a propósito: cuando tenía `= new Date()` por
+ * default, el día salía de la zona horaria del proceso (UTC en Vercel) y la
+ * semana cambiaba seis horas antes para un club mexicano. Pásale
+ * clubToday(team.timezone).
+ */
+export function getCurrentWeekRange(reference: Date) {
   return {
     start: startOfWeek(reference, { weekStartsOn: 1 }),
     end: endOfWeek(reference, { weekStartsOn: 1 }),
@@ -23,12 +30,13 @@ export function getCurrentWeekRange(reference = new Date()) {
  * Convierte el query param ?date=yyyy-MM-dd (usado para navegar entre
  * semanas/meses en el calendario) en una fecha de referencia. Cualquier día
  * dentro de la semana/mes deseado sirve — getCurrentWeekRange/getMonthGridRange
- * ya normalizan. Si el param falta o es inválido, usa hoy.
+ * ya normalizan. Si el param falta o es inválido, usa `today` — que debe venir
+ * de clubToday(team.timezone), no de new Date().
  */
-export function parseDateParam(param?: string): Date {
-  if (!param) return new Date();
+export function parseDateParam(param: string | undefined, today: Date): Date {
+  if (!param) return today;
   const parsed = parseISO(param);
-  return isValid(parsed) ? parsed : new Date();
+  return isValid(parsed) ? parsed : today;
 }
 
 export function adjacentWeekParams(reference: Date) {

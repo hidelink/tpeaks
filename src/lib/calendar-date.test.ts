@@ -75,7 +75,7 @@ describe("todayAsUtcMidnight", () => {
   it("retorna medianoche UTC del día calendario local de hoy", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 6, 24, 15, 30)); // 24 de julio, 3:30pm hora local
-    const result = todayAsUtcMidnight();
+    const result = todayAsUtcMidnight(new Date());
 
     expect(result.getUTCFullYear()).toBe(2026);
     expect(result.getUTCMonth()).toBe(6);

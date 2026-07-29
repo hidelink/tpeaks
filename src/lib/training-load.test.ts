@@ -47,7 +47,7 @@ describe("getWeeklyLoadSeries", () => {
       completion("2026-07-20T00:00:00.000Z", 3, 30), // semana actual: load 90 (descarga)
     ]);
 
-    const weeks = await getWeeklyLoadSeries("athlete_1", 4);
+    const weeks = await getWeeklyLoadSeries("athlete_1", new Date(), 4);
 
     expect(weeks.map((w) => w.load)).toEqual([160, 350, 440, 90]);
     expect(weeks.every((w) => w.hasData)).toBe(true);
@@ -59,7 +59,7 @@ describe("getWeeklyLoadSeries", () => {
     // como domingo en hora local y caería en la semana equivocada.
     findManyMock.mockResolvedValue([completion("2026-07-06T00:00:00.000Z", 7, 50)]);
 
-    const weeks = await getWeeklyLoadSeries("athlete_1", 4);
+    const weeks = await getWeeklyLoadSeries("athlete_1", new Date(), 4);
 
     const week29Jun = weeks[0]; // semana que empieza 29 de junio
     const week06Jul = weeks[1]; // semana que empieza 6 de julio
@@ -77,7 +77,7 @@ describe("getWeeklyLoadSeries", () => {
       completion("2026-07-20T00:00:00.000Z", 3, 30),
     ]);
 
-    const weeks = await getWeeklyLoadSeries("athlete_1", 4);
+    const weeks = await getWeeklyLoadSeries("athlete_1", new Date(), 4);
 
     expect(weeks).toHaveLength(4);
     expect(weeks[1].load).toBe(0);
@@ -92,7 +92,7 @@ describe("getWeeklyLoadSeries", () => {
       completion("2026-07-20T00:00:00.000Z", 3, 30), // 90
     ]);
 
-    const weeks = await getWeeklyLoadSeries("athlete_1", 4);
+    const weeks = await getWeeklyLoadSeries("athlete_1", new Date(), 4);
 
     expect(weeks[0].chronicAvg).toBeCloseTo(160);
     expect(weeks[1].chronicAvg).toBeCloseTo((160 + 350) / 2);
@@ -106,7 +106,7 @@ describe("getWeeklyLoadSeries", () => {
     // no deberían contarse como si fueran carga 0 con datos.
     findManyMock.mockResolvedValue([completion("2026-07-20T00:00:00.000Z", 5, 40)]);
 
-    const weeks = await getWeeklyLoadSeries("athlete_1", 4);
+    const weeks = await getWeeklyLoadSeries("athlete_1", new Date(), 4);
     const currentWeek = weeks[weeks.length - 1];
     expect(currentWeek.load).toBe(200);
   });

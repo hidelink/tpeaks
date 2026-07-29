@@ -15,6 +15,7 @@ import { toLocalCalendarDate, toQueryBoundary } from "@/lib/calendar-date";
 import { CalendarFilterBar } from "@/components/CalendarFilterBar";
 import { assertAthleteTeamAccess } from "@/lib/subscription-gate";
 import { sportMeta } from "@/lib/sports";
+import { clubToday } from "@/lib/club-time";
 
 export default async function AthleteCalendarPage({
   searchParams,
@@ -27,7 +28,8 @@ export default async function AthleteCalendarPage({
   if (!membership) return null;
   await assertAthleteTeamAccess(membership.teamId);
 
-  const reference = parseDateParam(date);
+  const today = clubToday(membership.team.timezone);
+  const reference = parseDateParam(date, today);
 
   const range =
     view === "week"
@@ -107,7 +109,7 @@ export default async function AthleteCalendarPage({
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-7">
         {days.map((day) => {
-          const isToday = isSameDay(day, new Date());
+          const isToday = isSameDay(day, today);
           const dimmed = monthInfo ? !isSameMonth(day, monthInfo.monthStart) : false;
           const dayWorkouts = workouts.filter((w) => isSameDay(toLocalCalendarDate(w.date), day));
           const visible = view === "month" ? dayWorkouts.slice(0, 2) : dayWorkouts;

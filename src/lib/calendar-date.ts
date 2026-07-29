@@ -26,9 +26,13 @@ export function toLocalCalendarDate(dbDate: Date): Date {
  * `new Date(new Date().toDateString())` — ese string legacy se parsea en
  * hora LOCAL y queda 6 horas (o lo que sea el offset) después de la
  * medianoche UTC real, excluyendo por error los entrenamientos de hoy.
+ *
+ * `today` es obligatorio: tiene que venir de clubToday(team.timezone). Cuando
+ * esta función llamaba a new Date() por su cuenta, "hoy" era el día del
+ * servidor (UTC en Vercel), no el del club.
  */
-export function todayAsUtcMidnight(): Date {
-  return toQueryBoundary(new Date());
+export function todayAsUtcMidnight(today: Date): Date {
+  return toQueryBoundary(today);
 }
 
 /**

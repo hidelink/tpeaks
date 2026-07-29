@@ -609,6 +609,34 @@ estaba excluido del reporte de cobertura, así que el 91% global se veía sano m
 autorización, validación e integridad no se medía. Se quitó la exclusión y se escribieron los
 primeros tests de acciones, con regresiones para estos bugs.
 
+### El cuarto bug de zona horaria, y el de fondo
+
+Los tres anteriores eran sobre **leer** fechas. Este es sobre **dónde está anclado el ahora**, y
+por eso afectaba a toda la app a la vez.
+
+Todo el cálculo de calendario usa funciones locales de date-fns, que leen la zona del proceso. En
+desarrollo era `America/Mexico_City`; en Vercel es UTC. A partir de las 18:00 de México el servidor
+creía que era el día siguiente: el cumplimiento daba por vencido lo de hoy, la comparación de carga
+metía un día extra en el término anterior, "próximo entrenamiento" se saltaba el de hoy y el
+calendario resaltaba mal.
+
+Se detectó por un número que no cuadraba: el dashboard mostraba −72% donde el mismo cálculo corrido
+en local daba +53%. Reproducido exactamente con `TZ=UTC`, que además explicaba el "1/3" del
+cumplimiento (con el día correcto son 1/2).
+
+- **La zona es del club, no de la app.** `Team.timezone`, default `America/Mexico_City`. Un club en
+  Bogotá y otro en CDMX cierran su día en momentos distintos, y eso ya no es hipotético en cuanto
+  entre el segundo club.
+- **`clubToday(timezone)`** devuelve el día que el club está viviendo, anclado a medianoche local
+  del proceso — la misma convención que `toLocalCalendarDate`, para que se pueda pasar directo a
+  date-fns.
+- **El parámetro se volvió obligatorio** en `getCurrentWeekRange`, `parseDateParam`,
+  `todayAsUtcMidnight` y `getWeeklyLoadSeries`. El default `= new Date()` era exactamente lo que
+  escondía el bug; quitarlo hizo que el compilador listara los nueve sitios que había que revisar.
+  Un default cómodo es un lugar donde se esconde un supuesto.
+- **Una zona inválida cae al default en vez de lanzar**: mostrar el día equivocado unas horas es
+  menos grave que un dashboard en blanco.
+
 ### Cubrir la capa de acciones encontró cinco bugs más
 
 Al escribir los primeros tests de `src/lib/actions/` (de 58% a 92% de cobertura real) salieron

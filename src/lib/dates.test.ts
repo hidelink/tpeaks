@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   getCurrentWeekRange,
   parseDateParam,
@@ -41,30 +41,36 @@ describe("getCurrentWeekRange", () => {
   });
 });
 
-describe("parseDateParam", () => {
-  afterEach(() => {
-    vi.useRealTimers();
-  });
+/** Cualquier día sirve; lo que importa es que sea explícito y no new Date(). */
+const HOY = new Date(2026, 6, 28);
 
+describe("parseDateParam", () => {
   it("un string yyyy-MM-dd válido se parsea en hora local al mismo día", () => {
-    const result = parseDateParam("2026-07-24");
+    const result = parseDateParam("2026-07-24", HOY);
     expect(result.getFullYear()).toBe(2026);
     expect(result.getMonth()).toBe(6);
     expect(result.getDate()).toBe(24);
   });
 
-  it("sin param, usa hoy", () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 6, 24));
-    const result = parseDateParam(undefined);
-    expect(result.getDate()).toBe(24);
+  it("sin param, usa el día que se le pasa", () => {
+    expect(parseDateParam(undefined, HOY)).toBe(HOY);
   });
 
-  it("un string inválido cae de vuelta a hoy en vez de tronar", () => {
+  it("un string inválido cae de vuelta a ese mismo día en vez de tronar", () => {
+    expect(parseDateParam("no-es-una-fecha", HOY)).toBe(HOY);
+  });
+
+  // Antes el fallback era new Date(), así que el día salía del reloj del
+  // proceso — en Vercel, UTC. Ahora tiene que venir de quien llama, que sabe
+  // la zona del club.
+  it("NO usa el reloj del sistema: el día lo decide quien llama", () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 6, 24));
-    const result = parseDateParam("no-es-una-fecha");
-    expect(result.getDate()).toBe(24);
+    vi.setSystemTime(new Date(2026, 0, 1));
+    try {
+      expect(parseDateParam(undefined, HOY).getDate()).toBe(28);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

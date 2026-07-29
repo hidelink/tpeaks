@@ -89,6 +89,10 @@ model Team {
   slug         String  @unique
   logoUrl      String?
   primaryColor String?
+  /// Zona horaria IANA del club. "Hoy" se calcula aquí y no en el servidor:
+  /// Vercel corre en UTC, así que sin esto un club en México ve los números de
+  /// mañana a partir de las 18:00. Ver src/lib/club-time.ts.
+  timezone     String  @default("America/Mexico_City")
 
   // Fase 2 — el gate de suscripción no se activa hasta entonces,
   // pero el campo existe desde hoy para no requerir una migración después.

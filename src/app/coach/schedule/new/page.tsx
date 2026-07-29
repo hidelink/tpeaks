@@ -2,6 +2,7 @@ import { format } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import { ScheduleForm } from "./ScheduleForm";
 import { requirePageCapability } from "@/lib/page-guards";
+import { clubToday } from "@/lib/club-time";
 
 export default async function NewScheduledWorkoutPage({
   searchParams,
@@ -55,7 +56,7 @@ export default async function NewScheduledWorkoutPage({
             name: g.name,
             memberIds: g.members.map((m) => m.membershipId),
           }))}
-          defaultDate={date ?? format(new Date(), "yyyy-MM-dd")}
+          defaultDate={date ?? format(clubToday(membership.team.timezone), "yyyy-MM-dd")}
           defaultAthleteId={athleteId}
         />
       )}

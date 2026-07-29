@@ -27,9 +27,11 @@ export type WeeklyLoadPoint = {
 
 export async function getWeeklyLoadSeries(
   athleteMembershipId: string,
+  /** Día del club (clubToday), no del servidor — ver src/lib/club-time.ts. */
+  today: Date,
   weeksBack = 12,
 ): Promise<WeeklyLoadPoint[]> {
-  const now = new Date();
+  const now = today;
   const earliestWeekStart = startOfWeek(subWeeks(now, weeksBack - 1), { weekStartsOn: 1 });
 
   const completions = await prisma.workoutCompletion.findMany({

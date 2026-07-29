@@ -6,6 +6,7 @@ import { getCurrentMembership } from "@/lib/permissions";
 import { getCurrentWeekRange } from "@/lib/dates";
 import { toQueryBoundary, toLocalCalendarDate, todayAsUtcMidnight } from "@/lib/calendar-date";
 import { RUNNING_KM_SPORTS, sportMeta } from "@/lib/sports";
+import { clubToday } from "@/lib/club-time";
 import {
   weeklyCompliance,
   pickInactiveAthletes,
@@ -25,8 +26,10 @@ export default async function CoachDashboardPage() {
   const membership = await getCurrentMembership();
   if (!membership) return null;
 
-  const today = new Date();
-  const { start, end } = getCurrentWeekRange();
+  // El día del CLUB, no el del servidor: Vercel corre en UTC y a las 18:00
+  // de México ya sería mañana. Ver src/lib/club-time.ts.
+  const today = clubToday(membership.team.timezone);
+  const { start, end } = getCurrentWeekRange(today);
   const teamId = membership.teamId;
   const feedbackSince = toQueryBoundary(subDays(today, FEEDBACK_WINDOW_DAYS));
   const lastWeekStart = toQueryBoundary(startOfWeek(subWeeks(today, 1), { weekStartsOn: 1 }));
@@ -43,7 +46,7 @@ export default async function CoachDashboardPage() {
       }),
       // Vencidos sin marcar: ya pasó el día y siguen en PLANNED.
       prisma.scheduledWorkout.findMany({
-        where: { teamId, status: "PLANNED", date: { lt: todayAsUtcMidnight() } },
+        where: { teamId, status: "PLANNED", date: { lt: todayAsUtcMidnight(today) } },
         include: { athlete: { include: { user: true } } },
         orderBy: { date: "desc" },
         take: 8,

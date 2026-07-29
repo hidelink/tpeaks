@@ -11,6 +11,7 @@ import { PrivateNoteForm } from "./PrivateNoteForm";
 import { TrainingPacesCard } from "./TrainingPacesCard";
 import { requirePageCapability } from "@/lib/page-guards";
 import { can } from "@/lib/roles";
+import { clubToday } from "@/lib/club-time";
 
 export default async function AthleteProfilePage({
   params,
@@ -40,7 +41,7 @@ export default async function AthleteProfilePage({
       orderBy: { date: "desc" },
       take: 20,
     }),
-    getWeeklyLoadSeries(athlete.id, 8),
+    getWeeklyLoadSeries(athlete.id, clubToday(membership.team.timezone), 8),
   ]);
 
   const vdot = athlete.athleteProfile?.vdot ?? null;
