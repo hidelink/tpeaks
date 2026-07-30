@@ -10,6 +10,10 @@ const isPublicRoute = createRouteMatcher([
   // visitantes era código inalcanzable — y cualquier parámetro de la URL (por
   // ejemplo el ticket de una invitación) se perdía en ese rebote.
   "/",
+  // Quien llega de una invitación todavía no tiene sesión, y si el middleware
+  // rebota se pierden los parámetros __clerk_ticket/__clerk_status de la URL.
+  // Ya pasó una vez apuntando la invitación a "/".
+  "/invitacion",
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/api/webhooks(.*)",

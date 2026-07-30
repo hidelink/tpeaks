@@ -5,6 +5,7 @@ import { clerkClient } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { requireCapability } from "@/lib/permissions";
 import { ROLE_LABELS } from "@/lib/roles";
+import { absoluteUrl } from "@/lib/app-url";
 import type { MembershipRole } from "@/generated/prisma/enums";
 
 /**
@@ -67,16 +68,15 @@ export async function inviteMember(email: string, role: MembershipRole) {
     emailAddress,
     role: "org:member",
     inviterUserId: membership.user.clerkUserId,
-    // A PROPÓSITO sin redirectUrl. La documentación de Clerk es explícita: si se
-    // especifica uno, "you must handle the authentication flows in your code for
-    // that page" — el ticket llega como ?__clerk_ticket=... y hay que procesarlo.
-    // Sin él, Clerk manda a la pantalla correcta (registro si la persona no
-    // existe, ingreso si ya existe) y consume el ticket él mismo.
+    // Apunta a NUESTRA página, que incrusta el componente de Clerk y recibe
+    // ?__clerk_ticket=...&__clerk_status=... — ver src/app/invitacion/page.tsx
+    // para el porqué (el Account Portal de una instancia de desarrollo termina
+    // en la pantalla de bienvenida de Clerk y eso no se arregla por config).
     //
-    // Se intentó apuntarlo a "/" y fue peor: esa ruta exige sesión, así que el
-    // middleware rebotaba a /sign-in y se perdía el ticket en el camino. A dónde
-    // llega DESPUÉS de autenticarse se controla con forceRedirectUrl en nuestros
-    // componentes de /sign-in y /sign-up, que es donde corresponde.
+    // La ruta /invitacion es PÚBLICA en el middleware. Un intento anterior
+    // apuntó a "/", que exige sesión: el middleware rebotaba a /sign-in y se
+    // perdía el ticket.
+    redirectUrl: absoluteUrl("/invitacion"),
   });
 
   // upsert y no create: reinvitar a alguien reemplaza el rol prometido en vez
