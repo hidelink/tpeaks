@@ -22,6 +22,38 @@ function cleanEmail(email: string) {
 }
 
 /**
+ * Traduce un error de Clerk a algo que se pueda leer en pantalla.
+ *
+ * Sin esto, un error de Clerk sube tal cual y Next.js lo convierte en "An error
+ * occurred in the Server Components render... A digest property is included",
+ * que no le dice nada a nadie. Pasó de verdad al topar el límite de la
+ * instancia de desarrollo: 5 membresías por organización, contando invitaciones
+ * pendientes. El mensaje real venía en el error, solo que enterrado en los logs.
+ */
+function clerkErrorMessage(err: unknown): string | null {
+  if (typeof err !== "object" || err === null || !("clerkError" in err)) return null;
+
+  const errors = (err as { errors?: { code?: string; longMessage?: string; message?: string }[] })
+    .errors;
+  const first = errors?.[0];
+  if (!first) return null;
+
+  if (first.code === "organization_membership_quota_exceeded") {
+    return (
+      "Tu instancia de Clerk llegó a su límite de miembros por club (las " +
+      "instancias de desarrollo topan en 5, contando invitaciones pendientes). " +
+      "Quita a alguien del club o pasa Clerk a producción."
+    );
+  }
+  if (first.code === "duplicate_record") {
+    return "Ya hay una invitación pendiente para ese correo.";
+  }
+
+  // Los mensajes de Clerk son razonables; mejor mostrarlos que esconderlos.
+  return first.longMessage ?? first.message ?? null;
+}
+
+/**
  * Invita a alguien al club con el rol que va a tener al aceptar.
  *
  * PERMISOS: invitar un socio pide MANAGE_MEMBERS, pero invitar un Coach o un
@@ -63,21 +95,28 @@ export async function inviteMember(email: string, role: MembershipRole) {
   }
 
   const client = await clerkClient();
-  const invitation = await client.organizations.createOrganizationInvitation({
-    organizationId: membership.team.clerkOrgId,
-    emailAddress,
-    role: "org:member",
-    inviterUserId: membership.user.clerkUserId,
-    // Apunta a NUESTRA página, que incrusta el componente de Clerk y recibe
-    // ?__clerk_ticket=...&__clerk_status=... — ver src/app/invitacion/page.tsx
-    // para el porqué (el Account Portal de una instancia de desarrollo termina
-    // en la pantalla de bienvenida de Clerk y eso no se arregla por config).
-    //
-    // La ruta /invitacion es PÚBLICA en el middleware. Un intento anterior
-    // apuntó a "/", que exige sesión: el middleware rebotaba a /sign-in y se
-    // perdía el ticket.
-    redirectUrl: absoluteUrl("/invitacion"),
-  });
+  let invitation;
+  try {
+    invitation = await client.organizations.createOrganizationInvitation({
+      organizationId: membership.team.clerkOrgId,
+      emailAddress,
+      role: "org:member",
+      inviterUserId: membership.user.clerkUserId,
+      // Apunta a NUESTRA página, que incrusta el componente de Clerk y recibe
+      // ?__clerk_ticket=...&__clerk_status=... — ver src/app/invitacion/page.tsx
+      // para el porqué (el Account Portal de una instancia de desarrollo termina
+      // en la pantalla de bienvenida de Clerk y eso no se arregla por config).
+      //
+      // La ruta /invitacion es PÚBLICA en el middleware. Un intento anterior
+      // apuntó a "/", que exige sesión: el middleware rebotaba a /sign-in y se
+      // perdía el ticket.
+      redirectUrl: absoluteUrl("/invitacion"),
+    });
+  } catch (err) {
+    const readable = clerkErrorMessage(err);
+    if (readable) throw new Error(readable);
+    throw err;
+  }
 
   // upsert y no create: reinvitar a alguien reemplaza el rol prometido en vez
   // de chocar con el unique (teamId, email).
@@ -99,11 +138,17 @@ export async function revokeInvitation(invitationId: string) {
   const membership = await requireCapability("MANAGE_MEMBERS");
 
   const client = await clerkClient();
-  await client.organizations.revokeOrganizationInvitation({
-    organizationId: membership.team.clerkOrgId,
-    invitationId,
-    requestingUserId: membership.user.clerkUserId,
-  });
+  try {
+    await client.organizations.revokeOrganizationInvitation({
+      organizationId: membership.team.clerkOrgId,
+      invitationId,
+      requestingUserId: membership.user.clerkUserId,
+    });
+  } catch (err) {
+    const readable = clerkErrorMessage(err);
+    if (readable) throw new Error(readable);
+    throw err;
+  }
 
   // Acotado al club: sin el teamId, alguien podría borrar la fila de otro club
   // pasando su id de invitación. Puede no existir si la invitación se creó

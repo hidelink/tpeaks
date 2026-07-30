@@ -163,3 +163,57 @@ describe("revokeInvitation", () => {
     });
   });
 });
+
+describe("errores de Clerk", () => {
+  /** Un error del SDK de Clerk, con la forma real que trae. */
+  function clerkError(code: string, longMessage?: string) {
+    return Object.assign(new Error("Forbidden"), {
+      clerkError: true,
+      status: 403,
+      errors: [{ code, message: code, longMessage }],
+    });
+  }
+
+  // Regresión: este error subía tal cual y Next.js lo convertía en "An error
+  // occurred in the Server Components render... A digest property is included",
+  // que no le dice nada a nadie. El mensaje real quedaba enterrado en los logs.
+  it("el tope de miembros de la instancia da un mensaje accionable, no un 500 opaco", async () => {
+    createInvitationMock.mockRejectedValue(clerkError("organization_membership_quota_exceeded"));
+
+    await expect(inviteMember("nuevo@ejemplo.com", "ATHLETE")).rejects.toThrow(
+      /límite de miembros por club/,
+    );
+  });
+
+  it("una invitación duplicada se explica en vez de mostrar el código de Clerk", async () => {
+    createInvitationMock.mockRejectedValue(clerkError("duplicate_record"));
+
+    await expect(inviteMember("nuevo@ejemplo.com", "ATHLETE")).rejects.toThrow(
+      /invitación pendiente/,
+    );
+  });
+
+  it("para otros errores de Clerk se muestra su propio mensaje largo", async () => {
+    createInvitationMock.mockRejectedValue(
+      clerkError("something_else", "Ese dominio de correo está bloqueado."),
+    );
+
+    await expect(inviteMember("nuevo@ejemplo.com", "ATHLETE")).rejects.toThrow(
+      /dominio de correo está bloqueado/,
+    );
+  });
+
+  it("un error que no es de Clerk se deja pasar sin disfrazarlo", async () => {
+    createInvitationMock.mockRejectedValue(new Error("se cayó la red"));
+
+    await expect(inviteMember("nuevo@ejemplo.com", "ATHLETE")).rejects.toThrow(/se cayó la red/);
+  });
+
+  it("revocar traduce igual, no solo invitar", async () => {
+    revokeInvitationMock.mockRejectedValue(
+      clerkError("otro", "La invitación ya no existe."),
+    );
+
+    await expect(revokeInvitation("inv_1")).rejects.toThrow(/ya no existe/);
+  });
+});
