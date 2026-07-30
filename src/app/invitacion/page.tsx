@@ -24,9 +24,14 @@ import { SignIn, SignUp } from "@clerk/nextjs";
  *   __clerk_ticket  el ticket que vincula el registro con la invitación
  *   __clerk_status  "sign_up" si la persona no existe, "sign_in" si ya existe
  *
- * SI ALGO SALE MAL, se nota: la persona acabaría en /onboarding viendo "Crea tu
- * club" en vez de entrar al que la invitó, y su invitación seguiría pendiente
- * (puede volver a abrir el link del correo). No es un fallo silencioso.
+ * VERIFICADO de punta a punta con una invitación real: el componente incrustado
+ * SÍ consume el __clerk_ticket. Alguien sin cuenta previa se registró aquí,
+ * aterrizó en la app y quedó con el rol prometido. La referencia del componente
+ * no menciona tickets, así que quedaba en duda hasta probarlo.
+ *
+ * Si algún día dejara de funcionar, se nota: la persona acabaría en /onboarding
+ * viendo "Crea tu club" en vez de entrar al que la invitó, y su invitación
+ * seguiría pendiente (puede volver a abrir el link del correo).
  */
 export default async function InvitacionPage({
   searchParams,

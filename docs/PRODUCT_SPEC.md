@@ -609,6 +609,22 @@ estaba excluido del reporte de cobertura, así que el 91% global se veía sano m
 autorización, validación e integridad no se medía. Se quitó la exclusión y se escribieron los
 primeros tests de acciones, con regresiones para estos bugs.
 
+### El flujo de invitación, cerrado
+
+Tras cuatro rondas, el ciclo completo quedó verificado con personas reales: se invita eligiendo el
+rol, la persona se registra en `/invitacion` (nuestra página, que consume el `__clerk_ticket`),
+aterriza en la app y queda con el rol prometido. Probado en los tres caminos: cuenta nueva, cuenta
+existente, y alguien dado de baja al que se reinvita.
+
+Lo que costó tanto no fue el mecanismo del rol —ese funcionó desde el primer intento— sino a dónde
+aterriza la persona, y ahí se acumularon: un diagnóstico equivocado mío que rompió un flujo que
+servía, dos límites de la instancia de desarrollo de Clerk, un webhook que perdía eventos por
+llegar desordenados, y un error de Clerk que Next.js convertía en un 500 ilegible.
+
+**La lección transversal:** todo esto vivía en el único camino que ningún test cubría, porque
+atraviesa un proveedor externo, un correo y un navegador limpio. 317 tests no lo tocaban. Para
+flujos así no hay sustituto de probarlos con una persona real de punta a punta.
+
 ### Quitar miembros del club
 
 Un club necesita poder sacar gente, y de paso resuelve un problema práctico: el tope de 5 miembros
