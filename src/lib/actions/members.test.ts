@@ -2,6 +2,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
+const deleteOrgMembershipMock = vi.fn();
+vi.mock("@clerk/nextjs/server", () => ({
+  clerkClient: vi.fn(async () => ({
+    organizations: { deleteOrganizationMembership: deleteOrgMembershipMock },
+  })),
+}));
+
 vi.mock("@/lib/permissions", async () => {
   const actual = await vi.importActual<typeof import("@/lib/permissions")>("@/lib/permissions");
   return { ...actual, requireCapability: vi.fn() };
@@ -17,7 +24,7 @@ vi.mock("@/lib/prisma", () => ({
 
 import { prisma } from "@/lib/prisma";
 import { requireCapability, ForbiddenError } from "@/lib/permissions";
-import { updateMembershipRole } from "./members";
+import { updateMembershipRole, removeMember } from "./members";
 
 const requireCapabilityMock = requireCapability as unknown as ReturnType<typeof vi.fn>;
 const findMembershipMock = prisma.teamMembership.findFirst as unknown as ReturnType<typeof vi.fn>;
@@ -144,5 +151,111 @@ describe("updateMembershipRole", () => {
       await updateMembershipRole("m1", "ADMIN");
       expect(transactionMock).toHaveBeenCalledOnce();
     });
+  });
+});
+
+describe("removeMember", () => {
+  function target(role: string, overrides: Record<string, unknown> = {}) {
+    findMembershipMock.mockResolvedValue({
+      id: "m1",
+      teamId: "team_1",
+      role,
+      user: { name: "Ana", clerkUserId: "clerk_ana" },
+      team: { clerkOrgId: "org_1" },
+      ...overrides,
+    });
+  }
+
+  // Misma lógica de escalación que invitar y cambiar de rol: si quitar staff
+  // viviera en MANAGE_MEMBERS, un coach podría quitar al Admin del club.
+  it("quitar un socio pide MANAGE_MEMBERS", async () => {
+    target("ATHLETE");
+    await removeMember("m1");
+    expect(requireCapabilityMock).toHaveBeenCalledWith("MANAGE_MEMBERS");
+  });
+
+  it("quitar un coach o un admin pide MANAGE_CLUB", async () => {
+    target("COACH");
+    countMock.mockResolvedValue(2);
+    await removeMember("m1");
+    expect(requireCapabilityMock).toHaveBeenCalledWith("MANAGE_CLUB");
+  });
+
+  it("rechaza a alguien de otro club", async () => {
+    target("ATHLETE", { teamId: "otro_club" });
+    await expect(removeMember("m1")).rejects.toThrow(ForbiddenError);
+    expect(deleteOrgMembershipMock).not.toHaveBeenCalled();
+  });
+
+  it("no puedes quitarte a ti mismo: te quedarías fuera sin poder deshacerlo", async () => {
+    requireCapabilityMock.mockResolvedValue({ id: "m1", teamId: "team_1" });
+    target("ADMIN");
+    countMock.mockResolvedValue(3);
+
+    await expect(removeMember("m1")).rejects.toThrow(/ti mismo/);
+    expect(deleteOrgMembershipMock).not.toHaveBeenCalled();
+  });
+
+  it("no puedes quitar al último Admin", async () => {
+    target("ADMIN");
+    countMock.mockResolvedValue(1);
+
+    await expect(removeMember("m1")).rejects.toThrow(/sin ningún Admin/);
+    expect(deleteOrgMembershipMock).not.toHaveBeenCalled();
+  });
+
+  it("sí puedes quitar un Admin cuando hay otro", async () => {
+    target("ADMIN");
+    countMock.mockResolvedValue(2);
+    await expect(removeMember("m1")).resolves.toMatchObject({ name: "Ana" });
+  });
+
+  it("quita también de Clerk, no solo de nuestra base", async () => {
+    target("ATHLETE");
+    await removeMember("m1");
+
+    expect(deleteOrgMembershipMock).toHaveBeenCalledWith({
+      organizationId: "org_1",
+      userId: "clerk_ana",
+    });
+  });
+
+  // El orden importa: si escribiéramos primero en nuestra base y Clerk fallara,
+  // la persona quedaría REMOVED para nosotros pero con sesión válida, y
+  // upsertMembership la reactiva en el siguiente sync-on-read.
+  it("si Clerk falla, NO se toca nuestra base", async () => {
+    target("ATHLETE");
+    deleteOrgMembershipMock.mockRejectedValue(new Error("Clerk caído"));
+
+    await expect(removeMember("m1")).rejects.toThrow(/Clerk caído/);
+    expect(transactionMock).not.toHaveBeenCalled();
+  });
+
+  it("traduce los errores de Clerk en vez de dejarlos subir crudos", async () => {
+    target("ATHLETE");
+    deleteOrgMembershipMock.mockRejectedValue(
+      Object.assign(new Error("Forbidden"), {
+        clerkError: true,
+        errors: [{ code: "otro", longMessage: "No se pudo quitar en Clerk." }],
+      }),
+    );
+
+    await expect(removeMember("m1")).rejects.toThrow(/No se pudo quitar en Clerk/);
+  });
+
+  it("marca REMOVED en vez de borrar: el historial del club se conserva", async () => {
+    target("ATHLETE");
+    await removeMember("m1");
+
+    expect(updateMock).toHaveBeenCalledWith({
+      where: { id: "m1" },
+      data: { status: "REMOVED" },
+    });
+  });
+
+  it("lo saca de sus grupos de entrenamiento", async () => {
+    target("ATHLETE");
+    await removeMember("m1");
+    expect(deleteGroupsMock).toHaveBeenCalledWith({ where: { membershipId: "m1" } });
   });
 });

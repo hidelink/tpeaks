@@ -184,6 +184,16 @@ Tres cosas de los roles que no son obvias:
 - **Requiere `MANAGE_CLUB`, no `MANAGE_MEMBERS`**, aunque el selector viva en la pantalla de
   socios. `MANAGE_MEMBERS` lo tiene también el Coach: repartir roles ahí dejaría que cualquier
   coach se ascendiera a Admin.
+- **Quitar del club no borra datos.** La membresía pasa a `REMOVED` y su historial de
+  entrenamientos, feedback y asistencia se conserva — la asistencia del año pasado sigue contando
+  aunque la persona ya no esté. Por eso la interfaz dice "quitar" y no "eliminar". Se puede volver a
+  invitar después.
+- **Al quitar, se quita también de Clerk, y el orden importa.** Primero Clerk, después nuestra base:
+  al revés, si la llamada a Clerk fallara, la persona quedaría `REMOVED` para nosotros pero con
+  sesión válida, y `upsertMembership` la reactiva en el siguiente sync-on-read — volvería a entrar
+  sola.
+- **Nadie se puede quitar a sí mismo**, ni con otro Admin disponible: quedaría fuera sin forma de
+  deshacerlo desde dentro. Si un Admin se quiere ir, lo quita otro.
 - **No se puede dejar el club sin ningún Admin.** Un club sin Admin no tiene a nadie que pueda
   nombrar otro Admin — es un estado del que no se sale desde el producto.
 

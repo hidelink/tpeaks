@@ -609,6 +609,26 @@ estaba excluido del reporte de cobertura, así que el 91% global se veía sano m
 autorización, validación e integridad no se medía. Se quitó la exclusión y se escribieron los
 primeros tests de acciones, con regresiones para estos bugs.
 
+### Quitar miembros del club
+
+Un club necesita poder sacar gente, y de paso resuelve un problema práctico: el tope de 5 miembros
+de la instancia de desarrollo de Clerk se libera desde la app en vez del dashboard.
+
+- **No borra datos.** `REMOVED` en vez de `DELETE`: el historial de entrenamientos, feedback y
+  asistencia sigue siendo del club, y borrarlo rompería las llaves foráneas de `ScheduledWorkout`.
+  La interfaz dice "quitar del club", no "eliminar", porque prometer lo segundo sería mentir.
+- **Se quita también de Clerk, y el orden importa.** Primero Clerk, después nuestra base. Al revés,
+  si Clerk fallara, la persona quedaría `REMOVED` para nosotros pero con sesión válida — y
+  `upsertMembership` pone `status: ACTIVE` al actualizar, así que el siguiente sync-on-read la
+  reactivaría. Hay un test que fija que un fallo de Clerk no toque nuestra base.
+- **Los mismos tres guardas que en el resto de la gestión de miembros:** quitar un socio pide
+  `MANAGE_MEMBERS`, quitar staff pide `MANAGE_CLUB` (si no, un coach podría quitar al Admin), nadie
+  se quita a sí mismo, y no se puede dejar el club sin Admin.
+
+Tres acciones distintas —invitar, cambiar de rol, quitar— con la **misma** regla de reparto de
+poder. Que la regla se repita idéntica no es casualidad: es la señal de que la distinción
+`MANAGE_MEMBERS` / `MANAGE_CLUB` está trazada donde debía.
+
 ### Tres fallas encadenadas al aceptar una invitación
 
 Se invitó a un coach de verdad, aceptó, y aterrizó en la página de bienvenida de Clerk. Al

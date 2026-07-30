@@ -5,6 +5,7 @@ import { InviteMemberForm } from "./InviteMemberForm";
 import { RevokeInvitationButton } from "./RevokeInvitationButton";
 import { ROLE_LABELS, STAFF_ROLES, can } from "@/lib/roles";
 import { RoleSelect } from "./RoleSelect";
+import { RemoveMemberButton } from "./RemoveMemberButton";
 import { requirePageCapability } from "@/lib/page-guards";
 
 export default async function CoachAthletesPage() {
@@ -73,13 +74,24 @@ export default async function CoachAthletesPage() {
                 </p>
                 <p className="text-sm text-zinc-500">{m.user.email}</p>
               </div>
-              {canAssignRoles ? (
-                <RoleSelect membershipId={m.id} role={m.role} isSelf={m.id === membership.id} />
-              ) : (
-                <span className="rounded-full border border-[var(--team-accent)] px-2 py-1 text-xs font-medium">
-                  {ROLE_LABELS[m.role]}
-                </span>
-              )}
+              <div className="flex items-center gap-3">
+                {canAssignRoles ? (
+                  <RoleSelect membershipId={m.id} role={m.role} isSelf={m.id === membership.id} />
+                ) : (
+                  <span className="rounded-full border border-[var(--team-accent)] px-2 py-1 text-xs font-medium">
+                    {ROLE_LABELS[m.role]}
+                  </span>
+                )}
+                {/* Quitar staff pide MANAGE_CLUB, y uno mismo nunca: la acción
+                    lo vuelve a exigir, esto solo evita ofrecer lo imposible. */}
+                {canAssignRoles && m.id !== membership.id && (
+                  <RemoveMemberButton
+                    membershipId={m.id}
+                    name={m.user.name}
+                    role={ROLE_LABELS[m.role]}
+                  />
+                )}
+              </div>
             </li>
           ))}
         </ul>
@@ -136,6 +148,13 @@ export default async function CoachAthletesPage() {
                   <Link href={`/coach/athletes/${a.id}`} className="text-sm underline">
                     Ver perfil
                   </Link>
+                  {a.status === "ACTIVE" && (
+                    <RemoveMemberButton
+                      membershipId={a.id}
+                      name={a.user.name}
+                      role={ROLE_LABELS[a.role]}
+                    />
+                  )}
                 </div>
               </li>
             ))}
